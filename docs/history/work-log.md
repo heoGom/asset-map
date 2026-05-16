@@ -125,3 +125,9 @@
 - Git 추적 중이던 `backend/src/main/resources/db/data.sql` seed 파일을 제거
 - 기본 profile에서는 SQL seed를 로드하지 않고, `local` profile에서만 ignored `data.local.sql`/`seed.local.sql`을 선택적으로 로드하도록 변경
 - 예시 템플릿 `data.example.sql`, `seed.example.json`과 로컬 seed 작성 방법을 문서화
+
+### Backend Profile 설정 정리
+
+- 공통 `application.properties`에서 환경별 설정을 분리하고 기본 profile을 `local`로 지정
+- `application-local.properties`, `application-dev.properties`, `application-prod.properties`로 DB, H2 console, seed, logging, JWT secret 설정을 분리
+- 운영 profile은 DB 접속 정보와 JWT secret을 환경변수에서 주입받도록 정리

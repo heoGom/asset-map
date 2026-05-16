@@ -6,7 +6,7 @@ Asset Map 백엔드의 핵심 API를 수동으로 점검할 때 사용하는 시
 
 ## 공통 준비
 
-- backend 실행: `cd backend && ./gradlew bootRun`
+- backend 실행: `cd backend && SPRING_PROFILES_ACTIVE=local ./gradlew bootRun`
 - H2 콘솔: `http://localhost:8080/h2-console/`
 - 공통 응답 형식: `ApiResponse<T>`
 

@@ -103,7 +103,15 @@ cd backend
 ./gradlew bootRun
 ```
 
-Backend runs at: `http://localhost:8080`
+기본 profile은 `local`입니다. Backend runs at: `http://localhost:8080`
+
+Profile별 실행:
+
+```bash
+SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
+SPRING_PROFILES_ACTIVE=dev ./gradlew bootRun
+SPRING_PROFILES_ACTIVE=prod DB_URL=... DB_USERNAME=... DB_PASSWORD=... JWT_SECRET=... ./gradlew bootRun
+```
 
 ### Local Seed Data
 

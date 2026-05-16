@@ -110,10 +110,17 @@ cd backend
 ./gradlew bootRun
 ```
 - API Base: `http://localhost:8080`
-- H2 Console: `http://localhost:8080/h2-console/` (JDBC URL: `jdbc:h2:mem:test`)
+- H2 Console: `http://localhost:8080/h2-console/` (local JDBC URL: `jdbc:h2:mem:assetmap-local`)
+
+### Profile 구성
+- `application.properties`: 공통 설정만 관리하며 기본 profile은 `local`입니다.
+- `application-local.properties`: 로컬 단일 개발용 H2, H2 console, optional local seed 로딩을 사용합니다.
+- `application-dev.properties`: 공유 개발 환경용이며 DB/JPA 설정을 환경변수로 override할 수 있습니다.
+- `application-prod.properties`: 운영 환경용이며 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`을 환경변수로 주입해야 합니다. H2 console과 SQL seed는 비활성화합니다.
 
 ### 로컬 Seed 데이터
-- 기본 profile은 SQL seed를 로드하지 않습니다.
+- 공통 설정은 SQL seed를 로드하지 않습니다.
+- `local` profile은 Git에서 제외된 `data.local.sql`/`seed.local.sql`만 optional로 로드합니다.
 - 로컬 개발 데이터는 `backend/src/main/resources/db/data.example.sql`을 `data.local.sql`로 복사해 작성합니다.
 - `data.local.sql`, `seed.local.sql`, `*.local.csv`, `*.local.json`, `backend/src/main/resources/seed/local/**`는 Git 추적 대상에서 제외합니다.
 - 로컬 seed를 사용할 때만 `SPRING_PROFILES_ACTIVE=local ./gradlew bootRun`으로 실행합니다.
