@@ -106,3 +106,9 @@
 - 거래 입력 폼과 거래내역 목록 UI 추가
 - 거래 등록 성공 후 거래 목록, Holding, 자산 대시보드 관련 쿼리 갱신
 - 보유 현황은 Holding API 조회 전용으로 유지하고 empty state 추가
+
+### 거래 입력 폼 계좌/종목 옵션 로딩 수정
+
+- `GET /api/accounts`, `GET /api/securities`의 `ApiResponse.data` 배열을 거래 입력 폼 select 옵션으로 사용하도록 확인
+- 프론트엔드 `ApiResponse` 타입을 실제 백엔드 응답 구조(`success`, `code`, `message`, `data`)와 일치하도록 수정
+- 계좌/종목 데이터가 없을 때 empty 안내 문구를 표시하고 거래 등록 버튼을 비활성화

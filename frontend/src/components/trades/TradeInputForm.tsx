@@ -27,13 +27,13 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
     memo: "",
   });
 
-  const { data: accounts = [] } = useQuery({
+  const { data: accounts = [], isLoading: isAccountsLoading } = useQuery({
     queryKey: ["accounts"],
     queryFn: getAccounts,
     retry: false,
   });
 
-  const { data: securities = [] } = useQuery({
+  const { data: securities = [], isLoading: isSecuritiesLoading } = useQuery({
     queryKey: ["securities"],
     queryFn: getSecurityItems,
     retry: false,
@@ -41,6 +41,8 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
 
   const selectedSecurity = securities.find((item) => item.id === Number(form.securityItemId));
   const currency = selectedSecurity?.currency || "KRW";
+  const hasAccounts = accounts.length > 0;
+  const hasSecurities = securities.length > 0;
 
   const mutation = useMutation({
     mutationFn: createTrade,
@@ -58,8 +60,14 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
     },
   });
 
+  const isSubmitDisabled = mutation.isPending || !hasAccounts || !hasSecurities;
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isSubmitDisabled) {
+      return;
+    }
+
     mutation.mutate({
       userId,
       accountId: Number(form.accountId),
@@ -89,6 +97,7 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
           <select
             required
             value={form.accountId}
+            disabled={!hasAccounts}
             onChange={(event) => setForm({ ...form, accountId: event.target.value })}
             className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
           >
@@ -97,6 +106,9 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
               <option key={account.id} value={account.id}>{account.name}</option>
             ))}
           </select>
+          {!isAccountsLoading && !hasAccounts && (
+            <p className="mt-1 text-xs text-amber-700">등록된 계좌가 없습니다</p>
+          )}
         </label>
 
         <label className="block text-sm font-medium text-gray-700">
@@ -104,6 +116,7 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
           <select
             required
             value={form.securityItemId}
+            disabled={!hasSecurities}
             onChange={(event) => setForm({ ...form, securityItemId: event.target.value })}
             className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
           >
@@ -114,6 +127,9 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
               </option>
             ))}
           </select>
+          {!isSecuritiesLoading && !hasSecurities && (
+            <p className="mt-1 text-xs text-amber-700">등록된 종목이 없습니다</p>
+          )}
         </label>
 
         <label className="block text-sm font-medium text-gray-700">
@@ -217,7 +233,7 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
 
       <button
         type="submit"
-        disabled={mutation.isPending}
+        disabled={isSubmitDisabled}
         className="w-full rounded-xl bg-emerald-600 p-2 font-bold text-white hover:bg-emerald-700 disabled:bg-gray-300"
       >
         {mutation.isPending ? "등록 중" : "거래 등록"}
