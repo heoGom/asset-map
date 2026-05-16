@@ -77,3 +77,11 @@
 - `frontend/src/lib/api/dividends.ts`: 배당 관련 API 클라이언트 정의
 - `frontend/src/lib/mock/dividends.ts`: 배당 테스트용 Mock 데이터 구축
 - 홈 화면 네비게이션을 자산/배당 대시보드로 세분화
+
+### 계좌 관리 UI 구현
+
+- `frontend/src/app/accounts/page.tsx`: 계좌 목록 조회 및 신규 계좌 등록/삭제 기능 구현
+- `frontend/src/lib/api/accounts.ts`: 계좌 CRUD를 위한 API 클라이언트 추가
+- `frontend/src/lib/mock/accounts.ts`: 계좌 테스트용 Mock 데이터 구축
+- TanStack Query를 활용한 실시간 상태 동기화 및 낙관적 업데이트 기반 마련
+- 홈 화면 네비게이션에 '계좌 관리' 메뉴 추가

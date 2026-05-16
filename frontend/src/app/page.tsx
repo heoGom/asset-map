@@ -13,6 +13,7 @@ export default function Home() {
           <div className="flex gap-6 text-sm font-medium text-gray-600">
             <Link href="/assets" className="hover:text-emerald-600">자산 대시보드</Link>
             <Link href="/dividends" className="hover:text-emerald-600">배당 대시보드</Link>
+            <Link href="/accounts" className="hover:text-emerald-600">계좌 관리</Link>
           </div>
         </div>
       </nav>
