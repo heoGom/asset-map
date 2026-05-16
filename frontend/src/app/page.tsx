@@ -2,22 +2,7 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gray-50 text-gray-900">
-      {/* Navigation */}
-      <nav className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-emerald-600"></div>
-            <span className="text-xl font-bold tracking-tight">Asset Map</span>
-          </Link>
-          <div className="flex gap-6 text-sm font-medium text-gray-600">
-            <Link href="/assets" className="hover:text-emerald-600">자산 대시보드</Link>
-            <Link href="/dividends" className="hover:text-emerald-600">배당 대시보드</Link>
-            <Link href="/accounts" className="hover:text-emerald-600">계좌 관리</Link>
-          </div>
-        </div>
-      </nav>
-
+    <main className="flex-1 bg-gray-50">
       {/* Hero Section */}
       <section className="relative overflow-hidden px-6 pt-24 pb-32">
         <div className="mx-auto max-w-7xl text-center">
@@ -91,13 +76,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-100 bg-white py-12 text-center text-sm text-gray-400">
-        <div className="mx-auto max-w-7xl px-6">
-          <p>© 2026 Asset Map. All rights reserved.</p>
-        </div>
-      </footer>
     </main>
   );
 }

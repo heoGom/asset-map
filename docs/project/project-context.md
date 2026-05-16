@@ -15,7 +15,8 @@ Asset Map 프로젝트 작업을 수행할 때는 다음 순서로 문서를 확
 3. **전체 컨텍스트**: [project-context.md](./project-context.md) (본 문서)의 구현 범위와 마일스톤 확인
 4. **영역별 상세**: [backend.md](../architecture/backend.md), [frontend.md](../architecture/frontend.md)의 기술 스택, API 명세, 실행 정보 확인
 5. **공통 규칙**: `docs/common/rules/*`, `docs/common/operations/*` 확인
-6. **협업 이력**: [decisions.md](../history/decisions.md), [work-log.md](../history/work-log.md) 등을 통해 최근 변경 사항 파악
+6. **수동 검증**: [api-test-scenarios.md](./api-test-scenarios.md)로 핵심 API 확인
+7. **협업 이력**: [decisions.md](../history/decisions.md), [work-log.md](../history/work-log.md) 등을 통해 최근 변경 사항 파악
 
 ## 프로젝트 개요
 
@@ -50,5 +51,5 @@ Asset Map은 개인의 자산 정보를 지도화(Mapping)하고 시각적으로
 ## 문서 유지보수 규칙
 
 - **독립 운영**: Asset Map 저장소는 상위 워크스페이스 문서에 의존하지 않고도 작업할 수 있도록 내부 문서를 최신 상태(SSoT)로 유지합니다.
-- **현행화**: 기능 구현 또는 아키텍처 변경 시 관련 문서를 즉시 업데이트합니다.
+- **현행화**: 기능 구현 또는 아키텍처 변경 시 관련 문서를 즉시 업데이트합니다. 중요한 결정이나 변경은 필요할 때 `docs/history/`에 기록합니다.
 - **중복 제거**: 공통 규칙은 `docs/common/`에서 관리하며, 개별 문서에서는 해당 프로젝트 고유의 사실만 기록합니다.
