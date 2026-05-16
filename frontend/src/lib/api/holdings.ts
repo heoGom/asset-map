@@ -17,4 +17,20 @@ export interface HoldingResponse {
   profitLossRate: number;
 }
 
+export interface HoldingCreateRequest {
+  userId: number;
+  accountId: number;
+  securityItemId: number;
+  quantity: number;
+  averagePrice: number;
+  currentPrice: number;
+  currency: string;
+}
+
 export const getHoldings = () => fetchApi<HoldingResponse[]>("/api/holdings");
+
+export const createHolding = (request: HoldingCreateRequest) => 
+  fetchApi<HoldingResponse>("/api/holdings", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });

@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getAssetSummary,
   getAssetByAccount,
@@ -15,6 +16,7 @@ import SummaryCard from "@/components/dashboard/SummaryCard";
 import RatioChart from "@/components/dashboard/RatioChart";
 import TimelineChart from "@/components/dashboard/TimelineChart";
 import HoldingTable from "@/components/dashboard/HoldingTable";
+import AddHoldingForm from "@/components/holdings/AddHoldingForm";
 import {
   mockAssetSummary,
   mockAccountRatios,
@@ -27,6 +29,8 @@ import {
 } from "@/lib/mock/assets";
 
 export default function AssetsPage() {
+  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+  
   const { data: summary } = useQuery({
     queryKey: ["asset-summary"],
     queryFn: getAssetSummary,
@@ -100,7 +104,21 @@ export default function AssetsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-7xl">
-        <h1 className="mb-8 text-3xl font-bold text-gray-900">자산 대시보드</h1>
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-gray-900">자산 대시보드</h1>
+          <button 
+            onClick={() => setIsAddFormOpen(!isAddFormOpen)}
+            className="rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 transition-all"
+          >
+            {isAddFormOpen ? "닫기" : "보유 종목 추가"}
+          </button>
+        </div>
+
+        {isAddFormOpen && (
+          <div className="mb-8">
+            <AddHoldingForm onSuccess={() => setIsAddFormOpen(false)} />
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
