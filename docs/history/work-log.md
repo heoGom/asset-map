@@ -99,3 +99,10 @@
 - `MarketPrice` 가격 이력 구조와 Stub provider 추가
 - 국내 상장 해외 ETF 분석을 위한 분류 필드 보강
 - 대시보드 mock fallback이 실제 데이터 문제를 가리지 않도록 최소 수정
+
+### Frontend 거래 입력 흐름 전환
+
+- `/assets`의 입력 흐름을 Holding 직접 등록에서 TradeTransaction 등록으로 전환
+- 거래 입력 폼과 거래내역 목록 UI 추가
+- 거래 등록 성공 후 거래 목록, Holding, 자산 대시보드 관련 쿼리 갱신
+- 보유 현황은 Holding API 조회 전용으로 유지하고 empty state 추가

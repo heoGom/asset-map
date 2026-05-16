@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   getAssetSummary,
   getAssetByAccount,
@@ -16,10 +16,14 @@ import SummaryCard from "@/components/dashboard/SummaryCard";
 import RatioChart from "@/components/dashboard/RatioChart";
 import TimelineChart from "@/components/dashboard/TimelineChart";
 import HoldingTable from "@/components/dashboard/HoldingTable";
-import AddHoldingForm from "@/components/holdings/AddHoldingForm";
+import TradeInputForm from "@/components/trades/TradeInputForm";
+import TradeTable from "@/components/trades/TradeTable";
+import { getTrades } from "@/lib/api/trades";
+import { useAuth } from "@/lib/auth-provider";
 
 export default function AssetsPage() {
-  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+  const { userId } = useAuth();
+  const [isTradeFormOpen, setIsTradeFormOpen] = useState(false);
   
   const { data: summary } = useQuery({
     queryKey: ["asset-summary"],
@@ -65,7 +69,13 @@ export default function AssetsPage() {
 
   const { data: timeline } = useQuery({
     queryKey: ["asset-timeline"],
-    queryFn: () => getAssetTimeline(1),
+    queryFn: () => getAssetTimeline(userId),
+    retry: false,
+  });
+
+  const { data: trades } = useQuery({
+    queryKey: ["trades", userId],
+    queryFn: () => getTrades(userId),
     retry: false,
   });
 
@@ -96,6 +106,7 @@ export default function AssetsPage() {
   const displayStrategyRatios = strategyRatios || [];
   const displayHoldings = holdings || [];
   const displayTimeline = timeline || [];
+  const displayTrades = trades || [];
   const hasDataLoadIssue = !summary || !holdings;
 
   return (
@@ -109,16 +120,16 @@ export default function AssetsPage() {
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900">자산 대시보드</h1>
           <button 
-            onClick={() => setIsAddFormOpen(!isAddFormOpen)}
+            onClick={() => setIsTradeFormOpen(!isTradeFormOpen)}
             className="rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 transition-all"
           >
-            {isAddFormOpen ? "닫기" : "보유 종목 추가"}
+            {isTradeFormOpen ? "닫기" : "거래 입력"}
           </button>
         </div>
 
-        {isAddFormOpen && (
+        {isTradeFormOpen && (
           <div className="mb-8">
-            <AddHoldingForm onSuccess={() => setIsAddFormOpen(false)} />
+            <TradeInputForm onSuccess={() => setIsTradeFormOpen(false)} />
           </div>
         )}
 
@@ -162,6 +173,11 @@ export default function AssetsPage() {
         <div className="mb-8">
           <h2 className="mb-4 text-xl font-bold text-gray-900">보유 종목 상세</h2>
           <HoldingTable holdings={displayHoldings} />
+        </div>
+
+        <div className="mb-8">
+          <h2 className="mb-4 text-xl font-bold text-gray-900">거래내역</h2>
+          <TradeTable trades={displayTrades} />
         </div>
       </div>
     </div>

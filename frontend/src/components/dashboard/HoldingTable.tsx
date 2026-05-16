@@ -18,6 +18,14 @@ export default function HoldingTable({ holdings }: HoldingTableProps) {
       minimumFractionDigits: 2,
     }).format(value);
 
+  if (holdings.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
+        현재 보유 종목이 없습니다. 거래 입력에서 INITIAL 또는 BUY 거래를 등록하세요.
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
       <div className="overflow-x-auto">

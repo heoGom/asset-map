@@ -1,0 +1,227 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getAccounts } from "@/lib/api/accounts";
+import { getSecurityItems } from "@/lib/api/security-items";
+import { createTrade, TransactionSource, TradeType } from "@/lib/api/trades";
+import { useAuth } from "@/lib/auth-provider";
+
+interface TradeInputFormProps {
+  onSuccess: () => void;
+}
+
+export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
+  const { userId } = useAuth();
+  const queryClient = useQueryClient();
+  const today = new Date().toISOString().slice(0, 10);
+  const [form, setForm] = useState({
+    accountId: "",
+    securityItemId: "",
+    tradeDate: today,
+    tradeType: TradeType.INITIAL,
+    quantity: "",
+    price: "",
+    fee: "0",
+    tax: "0",
+    memo: "",
+  });
+
+  const { data: accounts = [] } = useQuery({
+    queryKey: ["accounts"],
+    queryFn: getAccounts,
+    retry: false,
+  });
+
+  const { data: securities = [] } = useQuery({
+    queryKey: ["securities"],
+    queryFn: getSecurityItems,
+    retry: false,
+  });
+
+  const selectedSecurity = securities.find((item) => item.id === Number(form.securityItemId));
+  const currency = selectedSecurity?.currency || "KRW";
+
+  const mutation = useMutation({
+    mutationFn: createTrade,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trades", userId] });
+      queryClient.invalidateQueries({ queryKey: ["holdings"] });
+      queryClient.invalidateQueries({ queryKey: ["asset-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["asset-by-account"] });
+      queryClient.invalidateQueries({ queryKey: ["asset-by-country"] });
+      queryClient.invalidateQueries({ queryKey: ["asset-by-type"] });
+      queryClient.invalidateQueries({ queryKey: ["asset-by-sector"] });
+      queryClient.invalidateQueries({ queryKey: ["asset-by-strategy"] });
+      queryClient.invalidateQueries({ queryKey: ["asset-timeline"] });
+      onSuccess();
+    },
+  });
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    mutation.mutate({
+      userId,
+      accountId: Number(form.accountId),
+      securityItemId: Number(form.securityItemId),
+      tradeDate: form.tradeDate,
+      tradeType: form.tradeType,
+      quantity: Number(form.quantity),
+      price: Number(form.price),
+      fee: Number(form.fee || 0),
+      tax: Number(form.tax || 0),
+      currency,
+      source: form.tradeType === TradeType.INITIAL ? TransactionSource.INITIAL : TransactionSource.MANUAL,
+      memo: form.memo || undefined,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+      <div>
+        <h2 className="text-xl font-bold text-gray-900">거래 입력</h2>
+        <p className="mt-1 text-sm text-gray-500">초기 보유 등록은 거래유형 INITIAL을 사용합니다.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <label className="block text-sm font-medium text-gray-700">
+          계좌
+          <select
+            required
+            value={form.accountId}
+            onChange={(event) => setForm({ ...form, accountId: event.target.value })}
+            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+          >
+            <option value="">계좌 선택</option>
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>{account.name}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block text-sm font-medium text-gray-700">
+          종목
+          <select
+            required
+            value={form.securityItemId}
+            onChange={(event) => setForm({ ...form, securityItemId: event.target.value })}
+            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+          >
+            <option value="">종목 선택</option>
+            {securities.map((security) => (
+              <option key={security.id} value={security.id}>
+                {security.ticker} - {security.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block text-sm font-medium text-gray-700">
+          거래일
+          <input
+            required
+            type="date"
+            value={form.tradeDate}
+            onChange={(event) => setForm({ ...form, tradeDate: event.target.value })}
+            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-gray-700">
+          거래유형
+          <select
+            required
+            value={form.tradeType}
+            onChange={(event) => setForm({ ...form, tradeType: event.target.value as TradeType })}
+            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+          >
+            {Object.values(TradeType).map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block text-sm font-medium text-gray-700">
+          수량
+          <input
+            required
+            min="0"
+            step="0.000001"
+            type="number"
+            value={form.quantity}
+            onChange={(event) => setForm({ ...form, quantity: event.target.value })}
+            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-gray-700">
+          단가
+          <input
+            required
+            min="0"
+            step="0.000001"
+            type="number"
+            value={form.price}
+            onChange={(event) => setForm({ ...form, price: event.target.value })}
+            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-gray-700">
+          수수료
+          <input
+            min="0"
+            step="0.01"
+            type="number"
+            value={form.fee}
+            onChange={(event) => setForm({ ...form, fee: event.target.value })}
+            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-gray-700">
+          세금
+          <input
+            min="0"
+            step="0.01"
+            type="number"
+            value={form.tax}
+            onChange={(event) => setForm({ ...form, tax: event.target.value })}
+            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-gray-700">
+          통화
+          <input
+            readOnly
+            value={currency}
+            className="mt-1 block w-full rounded-lg border border-gray-200 bg-gray-50 p-2 text-gray-600"
+          />
+        </label>
+      </div>
+
+      <label className="block text-sm font-medium text-gray-700">
+        메모
+        <input
+          type="text"
+          value={form.memo}
+          onChange={(event) => setForm({ ...form, memo: event.target.value })}
+          className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+        />
+      </label>
+
+      {mutation.isError && (
+        <p className="text-sm text-rose-600">거래 등록에 실패했습니다. 입력값과 보유수량을 확인하세요.</p>
+      )}
+
+      <button
+        type="submit"
+        disabled={mutation.isPending}
+        className="w-full rounded-xl bg-emerald-600 p-2 font-bold text-white hover:bg-emerald-700 disabled:bg-gray-300"
+      >
+        {mutation.isPending ? "등록 중" : "거래 등록"}
+      </button>
+    </form>
+  );
+}

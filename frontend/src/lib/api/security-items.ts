@@ -10,5 +10,4 @@ export interface SecurityItemResponse {
   securityType: string;
 }
 
-export const searchSecurityItems = (keyword: string) => 
-  fetchApi<SecurityItemResponse[]>(`/api/securities/search?keyword=${keyword}`);
+export const getSecurityItems = () => fetchApi<SecurityItemResponse[]>("/api/securities");
