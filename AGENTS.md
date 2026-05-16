@@ -8,13 +8,13 @@ AI는 모든 작업 시 다음 절차를 따릅니다.
 
 1. **사전 조사**
    - 1순위: `AGENTS.md` (본 문서)
-   - 2순위: `docs/project-context.md`
+   - 2순위: `docs/project/project-context.md`
    - 3순위: 작업 영역별 문서
      - 공통 개발 규칙: `docs/common/rules/*`
      - 반복 작업 절차: `docs/common/operations/*`
-     - backend 상세: `docs/backend.md`
-     - frontend 상세: `docs/front.md`
-     - 요구사항 및 작업 이력: `docs/requirements.md`, `docs/decisions.md`, `docs/work-log.md`
+     - backend 상세: `docs/architecture/backend.md`
+     - frontend 상세: `docs/architecture/frontend.md`
+     - 요구사항 및 작업 이력: `docs/project/requirements.md`, `docs/history/decisions.md`, `docs/history/work-log.md`
 
 2. **작업 범위 확인**
    - 작업 대상은 이 저장소 루트(`asset-map`)를 기준으로 판단합니다.
@@ -26,8 +26,9 @@ AI는 모든 작업 시 다음 절차를 따릅니다.
    - 기능 수정에는 필요한 테스트 코드를 함께 포함합니다.
 
 4. **문서 동기화**
-   - 기획, 요구사항, 프롬프트, 의사결정, 작업 일지는 `docs/`에 기록합니다.
-   - 구현 방식이나 실행 방법이 바뀌면 `docs/project-context.md`, `docs/backend.md`, `docs/front.md`, `README.md` 중 관련 문서를 함께 업데이트합니다.
+   - 기획과 요구사항은 `docs/project/`에 기록합니다.
+   - 프롬프트, 의사결정, 작업 일지는 `docs/history/`에 기록합니다.
+   - 구현 방식이나 실행 방법이 바뀌면 `docs/project/project-context.md`, `docs/architecture/backend.md`, `docs/architecture/frontend.md`, `README.md` 중 관련 문서를 함께 업데이트합니다.
 
 5. **Git 기록**
    - 사용자와 AI가 함께 작업한 변경사항은 Git 커밋으로 남깁니다.
@@ -41,8 +42,9 @@ AI는 모든 작업 시 다음 절차를 따릅니다.
 - **SSoT**:
   - 공통 개발 규칙: `docs/common/rules/*`
   - 반복 작업 절차: `docs/common/operations/*`
-  - 프로젝트 구현 정보: `docs/project-context.md`, `docs/backend.md`, `docs/front.md`
-  - 협업 이력: `docs/requirements.md`, `docs/prompts.md`, `docs/decisions.md`, `docs/work-log.md`
+  - 프로젝트 컨텍스트와 요구사항: `docs/project/*`
+  - 구현 정보: `docs/architecture/*`
+  - 협업 이력: `docs/history/*`
 - **중복 방지**: backend/frontend 내부에는 별도 `AGENTS.md`를 두지 않습니다.
 - **충돌 해결**: 내부 공통 규칙과 프로젝트 문서가 충돌하면 사용자에게 보고하고, 합의된 내용을 내부 문서에 반영합니다.
 

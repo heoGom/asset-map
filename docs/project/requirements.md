@@ -29,3 +29,4 @@
 - 사용자와 AI가 함께 만든 과정을 저장소 안에 남기는 것을 목표로 한다.
 - Asset Map 저장소만 clone해도 AI 작업 규칙과 공통 개발 규칙을 확인할 수 있도록 `AGENTS.md`와 `docs/common/`을 프로젝트 내부에 둔다.
 - 상위 `dev` 워크스페이스에서 Codex를 실행하더라도 Asset Map 작업은 내부 `asset-map/AGENTS.md`와 `asset-map/docs/`를 기준으로 안내되도록 한다.
+- 프로젝트 내부 문서는 `docs/project`, `docs/architecture`, `docs/history`, `docs/common`으로 구조화한다.
