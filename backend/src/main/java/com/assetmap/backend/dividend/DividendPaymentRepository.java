@@ -1,0 +1,14 @@
+package com.assetmap.backend.dividend;
+
+import java.time.LocalDate;
+import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface DividendPaymentRepository extends JpaRepository<DividendPayment, Long> {
+
+	List<DividendPayment> findByUserId(Long userId);
+
+	List<DividendPayment> findByUserIdAndStatus(Long userId, DividendPaymentStatus status);
+
+	List<DividendPayment> findByUserIdAndStatusAndPaymentDateBetween(Long userId, DividendPaymentStatus status, LocalDate from, LocalDate to);
+}
