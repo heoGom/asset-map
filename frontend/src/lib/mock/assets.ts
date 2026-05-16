@@ -40,36 +40,13 @@ export const mockStrategyRatios = [
 ];
 
 export const mockHoldings = [
-  {
-    id: 1,
-    accountId: 1,
-    accountName: "신한 주식 계좌",
-    securityItemId: 1,
-    ticker: "AAPL",
-    securityName: "Apple Inc.",
-    quantity: 100,
-    averagePrice: 150,
-    currentPrice: 185,
-    currency: "USD",
-    investedAmount: 15000,
-    evaluatedAmount: 18500,
-    profitLoss: 3500,
-    profitLossRate: 0.23,
-  },
-  {
-    id: 2,
-    accountId: 1,
-    accountName: "신한 주식 계좌",
-    securityItemId: 2,
-    ticker: "MSFT",
-    securityName: "Microsoft Corp.",
-    quantity: 50,
-    averagePrice: 250,
-    currentPrice: 310,
-    currency: "USD",
-    investedAmount: 12500,
-    evaluatedAmount: 15500,
-    profitLoss: 3000,
-    profitLossRate: 0.24,
-  },
+  // ... rest of mockHoldings
+];
+
+export const mockTimeline = [
+  { date: "2024-01-01", totalAssetAmount: 85000000 },
+  { date: "2024-02-01", totalAssetAmount: 88000000 },
+  { date: "2024-03-01", totalAssetAmount: 92000000 },
+  { date: "2024-04-01", totalAssetAmount: 95000000 },
+  { date: "2024-05-01", totalAssetAmount: 115000000 },
 ];

@@ -68,3 +68,12 @@
 - `frontend/src/lib/query-provider.tsx` 추가 및 `layout.tsx` 설정으로 TanStack Query 환경 구축
 - Tailwind CSS를 활용한 반응형 카드형 UI 적용
 - Backend API 연동 및 실패 시 Mock 데이터로의 부드러운 폴백 처리
+
+### 자산 타임라인 및 배당 대시보드 고도화
+
+- `frontend/src/components/dashboard/TimelineChart.tsx`: 자산 성장 추이를 보여주는 Line Chart 구현 (Recharts)
+- `frontend/src/app/assets/page.tsx`: 자산 대시보드에 타임라인 차트 통합
+- `frontend/src/app/dividends/page.tsx`: 배당 대시보드 신규 구현 (요약 카드, 월별 배당 차트, 종목별 배당 상세 테이블)
+- `frontend/src/lib/api/dividends.ts`: 배당 관련 API 클라이언트 정의
+- `frontend/src/lib/mock/dividends.ts`: 배당 테스트용 Mock 데이터 구축
+- 홈 화면 네비게이션을 자산/배당 대시보드로 세분화

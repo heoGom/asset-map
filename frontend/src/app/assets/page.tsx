@@ -8,10 +8,12 @@ import {
   getAssetByType,
   getAssetBySector,
   getAssetByStrategy,
+  getAssetTimeline,
 } from "@/lib/api/assets";
 import { getHoldings } from "@/lib/api/holdings";
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import RatioChart from "@/components/dashboard/RatioChart";
+import TimelineChart from "@/components/dashboard/TimelineChart";
 import HoldingTable from "@/components/dashboard/HoldingTable";
 import {
   mockAssetSummary,
@@ -21,10 +23,10 @@ import {
   mockSectorRatios,
   mockStrategyRatios,
   mockHoldings,
+  mockTimeline,
 } from "@/lib/mock/assets";
 
 export default function AssetsPage() {
-  // Try real API first, fallback to mock is handled by using 'data || mock'
   const { data: summary } = useQuery({
     queryKey: ["asset-summary"],
     queryFn: getAssetSummary,
@@ -67,6 +69,12 @@ export default function AssetsPage() {
     retry: false,
   });
 
+  const { data: timeline } = useQuery({
+    queryKey: ["asset-timeline"],
+    queryFn: () => getAssetTimeline(1),
+    retry: false,
+  });
+
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("ko-KR", {
       style: "currency",
@@ -87,6 +95,7 @@ export default function AssetsPage() {
   const displaySectorRatios = sectorRatios || mockSectorRatios;
   const displayStrategyRatios = strategyRatios || mockStrategyRatios;
   const displayHoldings = holdings || mockHoldings;
+  const displayTimeline = timeline || mockTimeline;
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -113,6 +122,11 @@ export default function AssetsPage() {
             title="보유 종목 수"
             value={`${displaySummary.holdingCount}개`}
           />
+        </div>
+
+        {/* Timeline Chart */}
+        <div className="mb-8">
+          <TimelineChart data={displayTimeline} />
         </div>
 
         {/* Charts Grid */}
