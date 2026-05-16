@@ -52,3 +52,21 @@
 - `docs/` 루트에 평면적으로 있던 문서를 목적별 디렉터리로 나눈다.
 - 프로젝트 요구사항, 구현 정보, 협업 이력, 공통 규칙을 구분한다.
 - `AGENTS.md`와 문서 링크도 새 구조에 맞게 수정한다.
+
+## 2026-05-16: Backend 핵심 도메인과 대시보드 API 구현
+
+사용자는 backend 공통 구조 이후의 핵심 도메인과 대시보드 기능을 한 번에 구현하도록 요청했습니다.
+
+핵심 내용:
+
+- Account, SecurityItem, SecurityClassification, Holding CRUD
+- Asset Dashboard API
+- HoldingSnapshot 저장 및 기간별 자산 변화 API
+- DividendEvent, DividendPayment CRUD
+- Dividend Dashboard API
+- frontend 미수정
+- 작업 후 build, 실행, API 검증, commit, push
+
+## 2026-05-16: 문서 순서 정리 요청
+
+사용자는 `homepage`처럼 작업 순서와 문서 읽는 순서가 Asset Map 문서에도 정리되어 있어야 한다고 지적했고, 현재 문서 흐름을 그 기준에 맞게 맞추도록 요청했습니다.

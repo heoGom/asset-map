@@ -10,6 +10,15 @@
 - [common/rules](./common/rules): 프로젝트 공통 개발 규칙
 - [common/operations](./common/operations): 반복 작업 절차
 
+## 문서 읽는 순서
+
+1. [AGENTS.md](../AGENTS.md): 작업 규칙과 진입점 확인
+2. [project/project-context.md](./project/project-context.md): 프로젝트 전체 범위와 현재 상태 확인
+3. [architecture/backend.md](./architecture/backend.md): backend 구현 범위와 실행/검증 방법 확인
+4. [architecture/frontend.md](./architecture/frontend.md): frontend 현재 상태 확인
+5. [common/rules](./common/rules), [common/operations](./common/operations): 공통 규칙 확인
+6. [history](./history): 사용자 요청, 의사결정, 작업 흐름 확인
+
 ## 관리 원칙
 
 - Asset Map에 관한 기획과 요구사항은 `docs/project/`에 기록합니다.

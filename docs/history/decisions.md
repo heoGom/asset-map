@@ -29,3 +29,9 @@
 - 결정: `docs/` 루트에 흩어져 있던 문서를 `project`, `architecture`, `history`, `common`으로 구조화한다.
 - 이유: 프로젝트 요구사항, 구현 정보, 협업 이력, 공통 규칙의 성격이 달라서 같은 디렉터리에 두면 작업자가 필요한 문서를 찾기 어렵다.
 - 영향: `AGENTS.md`와 문서 링크는 새 경로를 기준으로 갱신한다.
+
+## 2026-05-16: Homepage 수준의 문서 순서 체계 반영
+
+- 결정: Asset Map 문서에도 `homepage`처럼 작업 및 문서 확인 순서, 문서 읽는 순서를 명시한다.
+- 이유: 작업 흐름이 명확히 드러나야 사용자와 AI가 현재 상태를 같은 기준으로 이해할 수 있다.
+- 영향: `docs/project/project-context.md`, `docs/README.md`, `docs/architecture/backend.md`를 현재 구현 기준과 함께 갱신한다.

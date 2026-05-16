@@ -43,3 +43,23 @@
 - `docs/architecture/` 추가: backend/frontend 구현 정보 관리
 - `docs/history/` 추가: 프롬프트, 의사결정, 작업 일지 관리
 - `AGENTS.md`와 문서 내부 링크를 새 구조에 맞게 수정
+
+### Backend 공통 구조 추가
+
+- `ApiResponse`, `ErrorCode`, `BusinessException`, `GlobalExceptionHandler` 추가
+- `BaseEntity`, `JpaAuditingConfig`, `GET /api/health` 추가
+- H2 콘솔 및 JPA 설정 보강
+
+### Backend 핵심 도메인 및 대시보드 구현
+
+- Account, SecurityItem, SecurityClassification, Holding CRUD 추가
+- 현재 보유 기준 자산 대시보드 API 추가
+- HoldingSnapshot 저장 및 기간별 자산 변화 API 추가
+- DividendEvent, DividendPayment CRUD 추가
+- 배당 요약, 월별/연도별/종목별/성장률 API 추가
+- `./gradlew test`, `./gradlew build`, `./gradlew bootRun` 및 주요 curl 검증 완료
+
+### 문서 순서 동기화
+
+- `homepage` 스타일에 맞춰 Asset Map 문서에도 작업 및 문서 확인 순서 추가
+- `project-context.md`, `docs/README.md`, `backend.md`를 실제 코드 상태 기준으로 갱신
