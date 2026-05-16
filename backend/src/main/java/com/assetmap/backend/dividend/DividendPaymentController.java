@@ -27,6 +27,11 @@ public class DividendPaymentController {
 		return ApiResponse.success(paymentService.create(request));
 	}
 
+	@PostMapping("/generate")
+	public ApiResponse<DividendPaymentGenerateResponse> generate(@Valid @RequestBody DividendPaymentGenerateRequest request) {
+		return ApiResponse.success(paymentService.generate(request));
+	}
+
 	@GetMapping
 	public ApiResponse<List<DividendPaymentResponse>> findAll() {
 		return ApiResponse.success(paymentService.findAll());

@@ -8,6 +8,13 @@ public record SecurityClassificationCreateRequest(
 		@NotNull AssetGroup assetGroup,
 		@NotNull Sector sector,
 		@NotNull StrategyType strategyType,
-		String theme
+		String theme,
+		String listingCountry,
+		String exposureCountry,
+		String exposureRegion,
+		String tradingCurrency,
+		String currencyExposure,
+		String underlyingIndex,
+		Boolean hedged
 ) {
 }

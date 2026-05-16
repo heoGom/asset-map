@@ -8,11 +8,6 @@ import {
 } from "@/lib/api/dividends";
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import MonthlyDividendChart from "@/components/dashboard/MonthlyDividendChart";
-import {
-  mockDividendSummary,
-  mockMonthlyDividends,
-  mockSecurityDividends,
-} from "@/lib/mock/dividends";
 
 export default function DividendsPage() {
   const { data: summary } = useQuery({
@@ -46,16 +41,23 @@ export default function DividendsPage() {
       minimumFractionDigits: 2,
     }).format(value);
 
-  const displaySummary = summary || mockDividendSummary;
-  const displayMonthly = monthly || mockMonthlyDividends;
-  const displaySecurities = securities || mockSecurityDividends;
-  const isMock = !summary && !monthly;
+  const displaySummary = summary || {
+    expectedAnnualDividend: 0,
+    monthlyAverageDividend: 0,
+    dividendYieldOnEvaluated: 0,
+    dividendYieldOnInvested: 0,
+    currentYearReceived: 0,
+    totalReceived: 0,
+  };
+  const displayMonthly = monthly || [];
+  const displaySecurities = securities || [];
+  const hasDataLoadIssue = !summary || !monthly;
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      {isMock && (
+      {hasDataLoadIssue && (
         <div className="mb-4 rounded-lg bg-amber-100 p-2 text-center text-sm text-amber-800">
-          현재 서버 연결이 원활하지 않아 Mock 데이터를 표시 중입니다.
+          실제 데이터를 불러오지 못했습니다. 서버 상태와 입력 데이터를 확인하세요.
         </div>
       )}
       <div className="mx-auto max-w-7xl">

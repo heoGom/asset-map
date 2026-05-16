@@ -35,7 +35,14 @@ public class SecurityClassificationService {
 				request.assetGroup(),
 				request.sector(),
 				request.strategyType(),
-				request.theme()
+				request.theme(),
+				request.listingCountry(),
+				request.exposureCountry(),
+				request.exposureRegion(),
+				request.tradingCurrency(),
+				request.currencyExposure(),
+				request.underlyingIndex(),
+				request.hedged()
 		);
 		return SecurityClassificationResponse.from(classificationRepository.save(classification));
 	}

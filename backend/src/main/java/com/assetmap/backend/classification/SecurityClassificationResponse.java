@@ -12,6 +12,13 @@ public record SecurityClassificationResponse(
 		Sector sector,
 		StrategyType strategyType,
 		String theme,
+		String listingCountry,
+		String exposureCountry,
+		String exposureRegion,
+		String tradingCurrency,
+		String currencyExposure,
+		String underlyingIndex,
+		Boolean hedged,
 		LocalDateTime createdAt,
 		LocalDateTime updatedAt
 ) {
@@ -27,6 +34,13 @@ public record SecurityClassificationResponse(
 				classification.getSector(),
 				classification.getStrategyType(),
 				classification.getTheme(),
+				classification.getListingCountry(),
+				classification.getExposureCountry(),
+				classification.getExposureRegion(),
+				classification.getTradingCurrency(),
+				classification.getCurrencyExposure(),
+				classification.getUnderlyingIndex(),
+				classification.getHedged(),
 				classification.getCreatedAt(),
 				classification.getUpdatedAt()
 		);

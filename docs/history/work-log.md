@@ -90,3 +90,12 @@
 
 - `docs/project/api-test-scenarios.md` 추가
 - `docs/project/README.md`와 `docs/project/project-context.md`에 수동 검증 순서 연결
+
+### 거래 기반 포트폴리오 데이터 흐름 추가
+
+- `TradeTransaction` 기반 자산 원천 데이터 구조 추가
+- 거래 등록/수정/삭제 시 `Holding` 자동 재계산
+- 배당 기준일 보유수량 계산 및 `DividendEvent` 기반 예상 `DividendPayment` 생성 API 추가
+- `MarketPrice` 가격 이력 구조와 Stub provider 추가
+- 국내 상장 해외 ETF 분석을 위한 분류 필드 보강
+- 대시보드 mock fallback이 실제 데이터 문제를 가리지 않도록 최소 수정

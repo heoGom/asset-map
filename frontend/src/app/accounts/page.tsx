@@ -2,7 +2,6 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAccounts, createAccount, deleteAccount, AccountType, AccountCreateRequest } from "@/lib/api/accounts";
-import { mockAccounts } from "@/lib/mock/accounts";
 import { useState } from "react";
 
 export default function AccountsPage() {
@@ -10,7 +9,7 @@ export default function AccountsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [newAccount, setNewAccount] = useState<Partial<AccountCreateRequest>>({
     userId: 1,
-    accountType: AccountType.STOCK,
+    accountType: AccountType.GENERAL,
     currency: "KRW",
   });
 
@@ -25,7 +24,7 @@ export default function AccountsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       setIsFormOpen(false);
-      setNewAccount({ userId: 1, accountType: AccountType.STOCK, currency: "KRW" });
+      setNewAccount({ userId: 1, accountType: AccountType.GENERAL, currency: "KRW" });
     },
   });
 
@@ -36,7 +35,7 @@ export default function AccountsPage() {
     },
   });
 
-  const displayAccounts = accounts || mockAccounts;
+  const displayAccounts = accounts || [];
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">

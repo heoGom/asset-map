@@ -17,16 +17,6 @@ import RatioChart from "@/components/dashboard/RatioChart";
 import TimelineChart from "@/components/dashboard/TimelineChart";
 import HoldingTable from "@/components/dashboard/HoldingTable";
 import AddHoldingForm from "@/components/holdings/AddHoldingForm";
-import {
-  mockAssetSummary,
-  mockAccountRatios,
-  mockCountryRatios,
-  mockTypeRatios,
-  mockSectorRatios,
-  mockStrategyRatios,
-  mockHoldings,
-  mockTimeline,
-} from "@/lib/mock/assets";
 
 export default function AssetsPage() {
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
@@ -92,21 +82,27 @@ export default function AssetsPage() {
       minimumFractionDigits: 2,
     }).format(value);
 
-  const displaySummary = summary || mockAssetSummary;
-  const displayAccountRatios = (accountRatios || mockAccountRatios).map(r => ({ category: r.accountName, amount: r.amount, ratio: r.ratio }));
-  const displayCountryRatios = countryRatios || mockCountryRatios;
-  const displayTypeRatios = typeRatios || mockTypeRatios;
-  const displaySectorRatios = sectorRatios || mockSectorRatios;
-  const displayStrategyRatios = strategyRatios || mockStrategyRatios;
-  const displayHoldings = holdings || mockHoldings;
-  const displayTimeline = timeline || mockTimeline;
-  const isMock = !summary && !holdings;
+  const displaySummary = summary || {
+    totalInvested: 0,
+    totalEvaluated: 0,
+    profitLoss: 0,
+    profitLossRate: 0,
+    holdingCount: 0,
+  };
+  const displayAccountRatios = (accountRatios || []).map(r => ({ category: r.accountName, amount: r.amount, ratio: r.ratio }));
+  const displayCountryRatios = countryRatios || [];
+  const displayTypeRatios = typeRatios || [];
+  const displaySectorRatios = sectorRatios || [];
+  const displayStrategyRatios = strategyRatios || [];
+  const displayHoldings = holdings || [];
+  const displayTimeline = timeline || [];
+  const hasDataLoadIssue = !summary || !holdings;
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      {isMock && (
+      {hasDataLoadIssue && (
         <div className="mb-4 rounded-lg bg-amber-100 p-2 text-center text-sm text-amber-800">
-          현재 서버 연결이 원활하지 않아 Mock 데이터를 표시 중입니다.
+          실제 데이터를 불러오지 못했습니다. 서버 상태와 입력 데이터를 확인하세요.
         </div>
       )}
       <div className="mx-auto max-w-7xl">

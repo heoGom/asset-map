@@ -8,7 +8,9 @@ import java.time.LocalDate;
 public record DividendEventUpdateRequest(
 		Long securityItemId,
 		Integer dividendYear,
+		LocalDate declarationDate,
 		LocalDate exDividendDate,
+		LocalDate recordDate,
 		LocalDate paymentDate,
 		@PositiveOrZero BigDecimal dividendPerShare,
 		@Pattern(regexp = ".*\\S.*") String currency,

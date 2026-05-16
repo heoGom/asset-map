@@ -74,6 +74,13 @@ public class Holding extends BaseEntity {
 		if (request.currency() != null) this.currency = request.currency();
 	}
 
+	public void replacePosition(BigDecimal quantity, BigDecimal averagePrice, BigDecimal currentPrice, String currency) {
+		this.quantity = quantity;
+		this.averagePrice = averagePrice;
+		this.currentPrice = currentPrice;
+		this.currency = currency;
+	}
+
 	public Long getId() {
 		return id;
 	}

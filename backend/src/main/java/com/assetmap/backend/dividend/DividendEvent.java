@@ -29,7 +29,10 @@ public class DividendEvent extends BaseEntity {
 	@Column(nullable = false)
 	private Integer dividendYear;
 
+	private LocalDate declarationDate;
 	private LocalDate exDividendDate;
+	@Column(nullable = false)
+	private LocalDate recordDate;
 	private LocalDate paymentDate;
 
 	@Column(nullable = false, precision = 19, scale = 6)
@@ -45,10 +48,12 @@ public class DividendEvent extends BaseEntity {
 	protected DividendEvent() {
 	}
 
-	public DividendEvent(SecurityItem securityItem, Integer dividendYear, LocalDate exDividendDate, LocalDate paymentDate, BigDecimal dividendPerShare, String currency, DataSourceType source) {
+	public DividendEvent(SecurityItem securityItem, Integer dividendYear, LocalDate declarationDate, LocalDate exDividendDate, LocalDate recordDate, LocalDate paymentDate, BigDecimal dividendPerShare, String currency, DataSourceType source) {
 		this.securityItem = securityItem;
 		this.dividendYear = dividendYear;
+		this.declarationDate = declarationDate;
 		this.exDividendDate = exDividendDate;
+		this.recordDate = recordDate;
 		this.paymentDate = paymentDate;
 		this.dividendPerShare = dividendPerShare;
 		this.currency = currency;
@@ -58,7 +63,9 @@ public class DividendEvent extends BaseEntity {
 	public void update(DividendEventUpdateRequest request, SecurityItem securityItem) {
 		if (securityItem != null) this.securityItem = securityItem;
 		if (request.dividendYear() != null) this.dividendYear = request.dividendYear();
+		if (request.declarationDate() != null) this.declarationDate = request.declarationDate();
 		if (request.exDividendDate() != null) this.exDividendDate = request.exDividendDate();
+		if (request.recordDate() != null) this.recordDate = request.recordDate();
 		if (request.paymentDate() != null) this.paymentDate = request.paymentDate();
 		if (request.dividendPerShare() != null) this.dividendPerShare = request.dividendPerShare();
 		if (request.currency() != null) this.currency = request.currency();
@@ -68,7 +75,9 @@ public class DividendEvent extends BaseEntity {
 	public Long getId() { return id; }
 	public SecurityItem getSecurityItem() { return securityItem; }
 	public Integer getDividendYear() { return dividendYear; }
+	public LocalDate getDeclarationDate() { return declarationDate; }
 	public LocalDate getExDividendDate() { return exDividendDate; }
+	public LocalDate getRecordDate() { return recordDate; }
 	public LocalDate getPaymentDate() { return paymentDate; }
 	public BigDecimal getDividendPerShare() { return dividendPerShare; }
 	public String getCurrency() { return currency; }

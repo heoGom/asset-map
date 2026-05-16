@@ -6,7 +6,7 @@ export const mockAccounts: AccountResponse[] = [
     userId: 1,
     name: "신한 주식 계좌",
     brokerName: "신한투자증권",
-    accountType: AccountType.STOCK,
+    accountType: AccountType.GENERAL,
     currency: "KRW",
     memo: "주력 국내외 주식용",
   },

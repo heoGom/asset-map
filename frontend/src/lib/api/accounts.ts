@@ -1,11 +1,14 @@
 import { fetchApi } from "../api-client";
 
 export enum AccountType {
+  GENERAL = "GENERAL",
   CASH = "CASH",
-  STOCK = "STOCK",
   ISA = "ISA",
   PENSION = "PENSION",
   IRP = "IRP",
+  CMA = "CMA",
+  SAVINGS = "SAVINGS",
+  CRYPTO = "CRYPTO",
 }
 
 export interface AccountResponse {

@@ -9,7 +9,9 @@ import java.time.LocalDate;
 public record DividendEventCreateRequest(
 		@NotNull Long securityItemId,
 		@NotNull Integer dividendYear,
+		LocalDate declarationDate,
 		LocalDate exDividendDate,
+		@NotNull LocalDate recordDate,
 		LocalDate paymentDate,
 		@NotNull @PositiveOrZero BigDecimal dividendPerShare,
 		@NotBlank String currency,
