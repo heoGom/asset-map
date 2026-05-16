@@ -100,9 +100,15 @@ export default function AssetsPage() {
   const displayStrategyRatios = strategyRatios || mockStrategyRatios;
   const displayHoldings = holdings || mockHoldings;
   const displayTimeline = timeline || mockTimeline;
+  const isMock = !summary && !holdings;
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
+      {isMock && (
+        <div className="mb-4 rounded-lg bg-amber-100 p-2 text-center text-sm text-amber-800">
+          현재 서버 연결이 원활하지 않아 Mock 데이터를 표시 중입니다.
+        </div>
+      )}
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900">자산 대시보드</h1>

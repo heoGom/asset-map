@@ -49,9 +49,15 @@ export default function DividendsPage() {
   const displaySummary = summary || mockDividendSummary;
   const displayMonthly = monthly || mockMonthlyDividends;
   const displaySecurities = securities || mockSecurityDividends;
+  const isMock = !summary && !monthly;
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
+      {isMock && (
+        <div className="mb-4 rounded-lg bg-amber-100 p-2 text-center text-sm text-amber-800">
+          현재 서버 연결이 원활하지 않아 Mock 데이터를 표시 중입니다.
+        </div>
+      )}
       <div className="mx-auto max-w-7xl">
         <h1 className="mb-8 text-3xl font-bold text-gray-900">배당 대시보드</h1>
 
