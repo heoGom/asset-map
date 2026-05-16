@@ -30,3 +30,9 @@
 - 저장소 내부 `docs/` 디렉터리 추가
 - 프로젝트 컨텍스트, backend, frontend 문서를 내부로 복제 및 정리
 - 요구사항, 프롬프트, 의사결정, 작업 일지 문서 추가
+
+### 독립 작업 루트 문서화
+
+- 저장소 루트 `AGENTS.md` 추가
+- 상위 워크스페이스의 공통 규칙 Markdown을 `docs/common/`으로 가져옴
+- Asset Map 작업은 내부 `AGENTS.md`와 `docs/common/`을 우선하도록 문서 정리
