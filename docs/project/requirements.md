@@ -1,32 +1,49 @@
-# Requirements
+# Asset Map Requirements
 
-## 초기 프로젝트 생성 요구사항
+이 문서는 **Asset Map** 프로젝트의 단계별 요구사항과 비즈니스 목표를 정의합니다.
 
-- 프로젝트명은 `asset-map`으로 한다.
-- 루트 구조는 `backend`, `frontend`로 구성한다.
-- backend는 Spring Boot 3, Java 17, Gradle 기반으로 생성한다.
-- backend 필수 의존성은 Spring Web, Spring Data JPA, Validation, H2 Database, Lombok이다.
-- 현재 단계에서는 Spring Security, JWT, 복잡한 도메인 구현을 하지 않는다.
-- frontend는 Next.js, TypeScript, Tailwind CSS 기반으로 생성한다.
-- frontend 추가 라이브러리는 Recharts, TanStack React Query, React Hook Form, Zod이다.
-- 현재 단계에서는 복잡한 화면 구현 없이 기본 홈 화면만 만든다.
-- 루트 `README.md`에는 프로젝트 개요, 기술 스택, 디렉터리 구조, backend/frontend 실행 방법을 적는다.
-- 작업 후 backend 실행, frontend 실행, 빌드 오류 없음, README 작성 여부를 확인한다.
+---
 
-## Git 관리 요구사항
+## 🎯 프로젝트 목표
+- 다양한 금융 자산을 한곳에서 통합 관리하고 시각화한다.
+- 과거의 자산 흐름을 추적하여 자산 성장 속도를 파악한다.
+- 미래의 배당 현황을 예측하여 현금 흐름 관리를 돕는다.
+- AI와의 협업을 전제로 하여 모든 의사결정과 구현 과정을 투명하게 문서화한다.
 
-- `asset-map` 프로젝트 루트를 Git 저장소로 초기화한다.
-- GitHub 원격 저장소는 `git@github.com-private:heoGom/asset-map.git`을 사용한다.
-- `main` 브랜치를 사용한다.
-- 기본 프로젝트 생성 결과를 `chore: initialize asset-map project` 커밋으로 기록한다.
-- `git push -u origin main`으로 원격 저장소에 push한다.
-- 앞으로 Codex와 함께 작업하는 모든 변경사항을 Git 기록으로 남긴다.
+---
 
-## 문서 관리 요구사항
+## 🛠️ 단계별 요구사항
 
-- 원래 작업은 상위 워크스페이스 `dev/AGENTS.md` 규칙을 따른다.
-- Asset Map과 관련된 기획, 요구사항, 프롬프트, 의사결정, 작업 일지는 프로젝트 내부 `docs/`에 함께 관리한다.
-- 사용자와 AI가 함께 만든 과정을 저장소 안에 남기는 것을 목표로 한다.
-- Asset Map 저장소만 clone해도 AI 작업 규칙과 공통 개발 규칙을 확인할 수 있도록 `AGENTS.md`와 `docs/common/`을 프로젝트 내부에 둔다.
-- 상위 `dev` 워크스페이스에서 Codex를 실행하더라도 Asset Map 작업은 내부 `asset-map/AGENTS.md`와 `asset-map/docs/`를 기준으로 안내되도록 한다.
-- 프로젝트 내부 문서는 `docs/project`, `docs/architecture`, `docs/history`, `docs/common`으로 구조화한다.
+### Phase 1: 기반 인프라 및 프로젝트 뼈대 구축 (완료)
+- [x] Monorepo 구조 설정 (`backend/`, `frontend/`, `docs/`)
+- [x] Backend: Spring Boot 3, JPA, H2, Validation 기반 구축
+- [x] Frontend: Next.js 16, TypeScript, Tailwind CSS 4 환경 설정
+- [x] 공통: 루트 `README.md` 및 `docs/` 허브 구성
+- [x] Git: 원격 저장소(`main` 브랜치) 연결 및 초기 커밋 완료
+
+### Phase 2: 핵심 도메인 모델링 및 기본 API (진행 중)
+- [x] **계좌 및 종목 관리**: 계좌(`Account`), 종목(`SecurityItem`) CRUD 구현
+- [x] **보유 현황**: 계좌별 종목 보유(`Holding`) 정보 관리
+- [x] **분류 체계**: 자산군, 섹터, 전략별 다각도 분류(`SecurityClassification`)
+- [x] **분석 API**: 총 자산 요약, 섹터/국가별 비중 통계 제공
+- [x] **이력 관리**: 시점별 자산 스냅샷(`HoldingSnapshot`) 저장 및 타임라인 조회
+
+### Phase 3: 배당 관리 및 대시보드 고도화 (예정)
+- [x] **배당 일정**: 예상 배당 이벤트(`DividendEvent`) 등록 및 관리
+- [x] **배당 지급**: 실제 지급된 배당금(`DividendPayment`) 기록
+- [ ] **대시보드 UI**: Recharts를 활용한 자산/배당 시각화 화면 구현
+- [ ] **배당 분석**: 월별 예상 배당금 달력, 연간 성장률 분석 API 고도화
+
+### Phase 4: 사용자 편의성 및 운영 (장기 계획)
+- [ ] **인증/인가**: Spring Security 및 JWT 기반 사용자 관리
+- [ ] **자동화**: 외부 API 연동을 통한 실시간 주가 및 환율 정보 자동 갱신
+- [ ] **데이터 가져오기**: CSV/Excel 업로드를 통한 보유 종목 대량 등록
+- [ ] **알림**: 배당금 지급 및 주요 자산 변동 알림 서비스
+
+---
+
+## ⚖️ 비즈니스 규칙 및 제약사항
+1. **데이터 정확성**: 자산 가치 합산 시 소수점 오차 방지를 위해 모든 통화 계산은 `BigDecimal`을 사용한다.
+2. **독립성**: 개별 저장소(`asset-map`)만으로도 전체 시스템 빌드 및 실행이 가능해야 한다.
+3. **문서화 우선**: 모든 기능 구현은 `docs/history/`에 의사결정 기록을 남긴 후 진행한다.
+4. **반응형 디자인**: 프론트엔드 UI는 최소 360px 너비를 지원하며 모바일에서도 모든 기능을 사용할 수 있어야 한다.

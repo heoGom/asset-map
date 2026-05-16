@@ -1,32 +1,77 @@
-# Asset Map Frontend
+# Asset Map Frontend Architecture
 
-## 기술 스택
+Next.js 16과 React 19를 활용한 Asset Map 프론트엔드는 직관적인 자산 시각화와 고성능 데이터 핸들링을 목표로 합니다.
 
-- Next.js 16.2.6
-- TypeScript
-- Tailwind CSS
-- Recharts
-- TanStack React Query
-- React Hook Form
-- Zod
+## 기본 정보
+- **경로**: `asset-map/frontend`
+- **프레임워크**: Next.js 16 (App Router)
+- **공통 규칙**: `docs/common/rules/` (코딩 규칙, UI/레이아웃 참조)
 
-## 현재 상태
+## 기술 스택 (Tech Stack)
 
-기본 홈 화면만 구성되어 있습니다. 복잡한 화면, API 연동, 상태 관리 구조는 아직 포함하지 않습니다.
+| Category | Technology | Description |
+| --- | --- | --- |
+| **Framework** | Next.js 16.2 | App Router 기반의 서버 사이드 렌더링 및 라우팅 |
+| **Library** | React 19 | 최신 React 기능 (Action, Suspense 등) 활용 |
+| **Styling** | Tailwind CSS 4 | 유틸리티 퍼스트 디자인 시스템 |
+| **Data Fetching** | TanStack Query 5 | 서버 상태 관리 및 캐싱 |
+| **Visualization** | Recharts 3.8 | 선언적 차트 라이브러리 (Pie, Bar, Line) |
+| **Form/Validation** | React Hook Form, Zod | 폼 관리 및 스키마 기반 검증 |
 
-## 실행 방법
+## UI 구조 및 레이아웃
 
+### 라우트 구성 (Planned)
+| Route | 설명 |
+| --- | --- |
+| `/` | 전체 자산 대시보드 (요약, 비중 차트, 타임라인) |
+| `/accounts` | 계좌 목록 및 개별 계좌 상세 조회 |
+| `/holdings` | 보유 종목 관리 및 신규 종목 추가 |
+| `/dividends` | 배당 달력 및 종목별 배당 분석 |
+| `/settings` | 자산 분류 체계 및 사용자 설정 |
+
+### 컴포넌트 설계 원칙
+- **Atomic Design Pattern** 기반의 컴포넌트 재사용성 극대화.
+- **Shared Components**: `Button`, `Input`, `Modal`, `Card` 등 공통 UI 요소.
+- **Domain Components**: `AssetChart`, `AccountList`, `DividendCalendar` 등 비즈니스 특화 요소.
+
+## 상태 관리 및 데이터 흐름
+
+### 서버 상태 (Server State)
+- **TanStack Query**를 사용하여 백엔드 API와의 통신을 관리합니다.
+- `useQuery`를 통한 데이터 fetch 및 캐싱, `useMutation`을 통한 자산 정보 수정/삭제.
+
+### 클라이언트 상태 (Local State)
+- 단순 UI 상태(모달 열림/닫힘, 탭 전환)는 `useState`를 사용합니다.
+- 복잡한 폼 상태는 **React Hook Form**과 **Zod**를 연동하여 관리합니다.
+
+## 시각화 전략 (Data Visualization)
+- **Pie Chart**: 자산군별(주식, 채권, 현금) 및 국가별 비중 시각화.
+- **Bar Chart**: 계좌별 자산 분포 및 월별 예상 배당금 표시.
+- **Line Chart**: 시간 흐름에 따른 총 자산 가치 변화(타임라인) 추적.
+- 모든 차트는 반응형으로 설계되어 모바일 뷰에서도 최적화된 경험을 제공합니다.
+
+## API 연동 방식
+
+### API Client
+- `src/lib/api-client.ts`에서 전역 `fetch` 설정을 관리합니다.
+- 백엔드의 `ApiResponse<T>` 포맷을 인터페이스로 정의하여 타입 안정성을 확보합니다.
+
+### 환경 변수 설정
+- Local 개발: `.env.local`에 `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`
+- 빌드 타임에 API 주소를 주입하여 환경별 유연한 대응이 가능하도록 구성합니다.
+
+## 실행 및 검증 (Run & Verify)
+
+### 로컬 실행
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+- Frontend: `http://localhost:3000`
 
-기본 실행 주소는 `http://localhost:3000`입니다.
-
-## 검증 방법
-
+### 린트 및 빌드
 ```bash
-cd frontend
-npm run build
+npm run lint    # 정적 분석 및 잠재적 오류 체크
+npm run build   # 프로덕션 빌드 최적화
 ```

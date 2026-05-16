@@ -59,7 +59,12 @@
 - 배당 요약, 월별/연도별/종목별/성장률 API 추가
 - `./gradlew test`, `./gradlew build`, `./gradlew bootRun` 및 주요 curl 검증 완료
 
-### 문서 순서 동기화
+### Frontend /assets 자산 대시보드 구현
 
-- `homepage` 스타일에 맞춰 Asset Map 문서에도 작업 및 문서 확인 순서 추가
-- `project-context.md`, `docs/README.md`, `backend.md`를 실제 코드 상태 기준으로 갱신
+- `frontend/src/app/assets/page.tsx` 생성: 총 자산 요약, 비중 차트, 보유 종목 목록을 포함한 대시보드 화면 구현
+- `frontend/src/components/dashboard/` 내 공통 컴포넌트 추가: `SummaryCard`, `RatioChart` (Recharts 기반), `HoldingTable`
+- `frontend/src/lib/api/` 내 API 클라이언트 추가: 자산 통계 및 보유 현황 조회를 위한 `assets.ts`, `holdings.ts`
+- `frontend/src/lib/mock/` 내 테스트용 Mock 데이터 분리
+- `frontend/src/lib/query-provider.tsx` 추가 및 `layout.tsx` 설정으로 TanStack Query 환경 구축
+- Tailwind CSS를 활용한 반응형 카드형 UI 적용
+- Backend API 연동 및 실패 시 Mock 데이터로의 부드러운 폴백 처리

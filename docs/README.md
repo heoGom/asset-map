@@ -1,29 +1,44 @@
-# Asset Map Docs
+# Asset Map Documentation Hub
 
-이 디렉터리는 Asset Map 프로젝트와 사용자-AI 협업 과정을 저장소 안에 남기기 위한 문서 공간입니다.
+이 디렉터리는 **Asset Map** 프로젝트의 설계, 구현, 그리고 사용자-AI 협업의 모든 과정을 기록하는 통합 문서 공간입니다. 프로젝트의 독립성을 유지하며, 어떤 환경에서도 AI와 협업할 수 있는 최신의 상태(SSoT, Single Source of Truth)를 제공합니다.
 
-## 문서 구성
+---
 
-- [project](./project): 프로젝트 컨텍스트와 요구사항
-- [architecture](./architecture): backend/frontend 구현 구조와 실행 정보
-- [history](./history): 프롬프트, 의사결정, 작업 일지
-- [common/rules](./common/rules): 프로젝트 공통 개발 규칙
-- [common/operations](./common/operations): 반복 작업 절차
+## 📂 문서 구조
 
-## 문서 읽는 순서
+프로젝트의 각 영역은 아래와 같이 구조화되어 관리됩니다.
 
-1. [AGENTS.md](../AGENTS.md): 작업 규칙과 진입점 확인
-2. [project/project-context.md](./project/project-context.md): 프로젝트 전체 범위와 현재 상태 확인
-3. [architecture/backend.md](./architecture/backend.md): backend 구현 범위와 실행/검증 방법 확인
-4. [architecture/frontend.md](./architecture/frontend.md): frontend 현재 상태 확인
-5. [common/rules](./common/rules), [common/operations](./common/operations): 공통 규칙 확인
-6. [history](./history): 사용자 요청, 의사결정, 작업 흐름 확인
+### 🎯 [Project Context & Requirements](./project)
+- **[Project Context](./project/project-context.md)**: 프로젝트 전체 범위, 현재 구현 상태 및 구성 개요.
+- **[Requirements](./project/requirements.md)**: 초기 기획부터 단계별 기능 요구사항 명세.
 
-## 관리 원칙
+### 🏗️ [Architecture & Implementation](./architecture)
+- **[Backend Architecture](./architecture/backend.md)**: Spring Boot 기반의 도메인 설계, 패키지 구조 및 API 명세.
+- **[Frontend Architecture](./architecture/frontend.md)**: Next.js 기반의 컴포넌트 구조 및 상태 관리 전략.
 
-- Asset Map에 관한 기획과 요구사항은 `docs/project/`에 기록합니다.
-- 프롬프트, 의사결정, 작업 일지는 `docs/history/`에 기록합니다.
-- backend/frontend 구현 정보는 `docs/architecture/`에 기록합니다.
-- 기능 구현 또는 실행 방식이 변경되면 관련 문서를 함께 업데이트합니다.
-- Asset Map 작업의 진입점은 저장소 루트의 `AGENTS.md`입니다.
-- 공통 규칙은 저장소 내부 `docs/common/`을 우선합니다.
+### 📜 [Collaboration History](./history)
+- **[Prompts & Decisions](./history/decisions.md)**: 주요 아키텍처 결정 및 AI에게 전달된 핵심 프롬프트 기록.
+- **[Work Log](./history/work-log.md)**: 일자별 작업 내역 및 업데이트 히스토리.
+
+### 🛠️ [Common Rules & Operations](./common)
+- **[Development Rules](./common/rules)**: 코딩 컨벤션, API 설계 원칙, 테스트 전략 등 공통 규칙.
+- **[Standard Operations](./common/operations)**: 파일 명세, 빌드 절차 등 반복되는 작업 가이드라인.
+
+---
+
+## 🚀 빠른 시작 가이드 (Reading Order)
+
+AI와 협업을 시작하거나 새로운 환경에서 프로젝트를 파악할 때 다음 순서를 권장합니다.
+
+1.  **[AGENTS.md](../AGENTS.md)**: 작업의 시작점이며, AI가 준수해야 할 최상위 규칙을 확인합니다.
+2.  **[Project Context](./project/project-context.md)**: 현재 프로젝트가 어디까지 진행되었는지 확인합니다.
+3.  **[Backend 상세](./architecture/backend.md) / [Frontend 상세](./architecture/frontend.md)**: 기술 스택과 실행 방법을 파악합니다.
+4.  **[History](./history)**: 이전 작업의 맥락과 의사결정 과정을 이해합니다.
+
+---
+
+## ⚖️ 문서 관리 원칙
+
+- **현행화**: 기능이 변경되거나 아키텍처가 수정되면 반드시 관련 문서를 동기화합니다.
+- **독립성**: 상위 워크스페이스의 문서 없이도 이 저장소만으로 모든 작업이 가능하도록 내부 문서를 우선합니다.
+- **가독성**: 표, 코드 블록, 다이어그램(Mermaid 등)을 적극 활용하여 직관적인 정보를 제공합니다.

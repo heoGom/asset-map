@@ -1,55 +1,54 @@
-# AI 작업 규칙 (Asset Map)
+# 🤖 AI 작업 규칙 (Asset Map)
 
-이 문서는 Asset Map 저장소에서 AI가 작업을 수행할 때 가장 먼저 읽고 준수해야 하는 프로젝트 루트 가이드라인입니다.
+이 문서는 **Asset Map** 저장소에서 AI가 작업을 수행할 때 반드시 준수해야 하는 최상위 가이드라인입니다. 프로젝트의 일관성을 유지하고 효율적인 협업을 위해 아래 규칙을 철저히 따릅니다.
 
-## 작업 순서
+---
 
-AI는 모든 작업 시 다음 절차를 따릅니다.
+## 🚀 작업 프로세스 (Standard Workflow)
 
-1. **사전 조사**
-   - 1순위: `AGENTS.md` (본 문서)
-   - 2순위: `docs/project/project-context.md`
-   - 3순위: 작업 영역별 문서
-     - 공통 개발 규칙: `docs/common/rules/*`
-     - 반복 작업 절차: `docs/common/operations/*`
-     - backend 상세: `docs/architecture/backend.md`
-     - frontend 상세: `docs/architecture/frontend.md`
-     - 요구사항 및 작업 이력: `docs/project/requirements.md`, `docs/history/decisions.md`, `docs/history/work-log.md`
+AI는 모든 요청에 대해 다음 5단계 절차를 수행합니다.
 
-2. **작업 범위 확인**
-   - 작업 대상은 이 저장소 루트(`asset-map`)를 기준으로 판단합니다.
-   - 요구사항이 모호하면 임의로 구현하지 말고 사용자에게 확인합니다.
+### 1. 사전 조사 (Research)
+- **1순위**: `AGENTS.md` (본 문서) 확인
+- **2순위**: [Project Context](./docs/project/project-context.md) 확인
+- **3순위**: 관련 상세 문서 확인
+  - 공통 규칙: `docs/common/rules/*`
+  - 아키텍처: `docs/architecture/*`
+  - 작업 이력: `docs/history/*`
 
-3. **전략 및 구현**
-   - 작고 명확한 단위로 변경합니다.
-   - 관련 없는 수정은 배제합니다.
-   - 기능 수정에는 필요한 테스트 코드를 함께 포함합니다.
+### 2. 범위 및 의도 파악 (Intent Alignment)
+- 작업 대상을 이 저장소 루트(`asset-map`)로 한정합니다.
+- 요구사항이 모호할 경우 임의로 판단하지 않고 사용자에게 질문합니다.
 
-4. **문서 동기화**
-   - 기획과 요구사항은 `docs/project/`에 기록합니다.
-   - 프롬프트, 의사결정, 작업 일지는 `docs/history/`에 기록합니다.
-   - 구현 방식이나 실행 방법이 바뀌면 `docs/project/project-context.md`, `docs/architecture/backend.md`, `docs/architecture/frontend.md`, `README.md` 중 관련 문서를 함께 업데이트합니다.
+### 3. 전략 및 구현 (Strategy & Execution)
+- 작고 명확한 단위(Atomic Changes)로 코드를 수정합니다.
+- 관련 없는 코드의 리팩토링이나 수정은 지양합니다.
+- 기능 추가/수정 시 반드시 테스트 코드를 포함하거나 검증 절차를 거칩니다.
 
-5. **Git 기록**
-   - 사용자와 AI가 함께 작업한 변경사항은 Git 커밋으로 남깁니다.
-   - 커밋 전 `git status`로 변경 범위를 확인합니다.
-   - 불필요한 빌드 산출물과 의존성 폴더는 커밋하지 않습니다.
+### 4. 문서 동기화 (Documentation)
+- 기획/요구사항 변경 시 `docs/project/` 문서를 갱신합니다.
+- 주요 의사결정 및 작업 내역은 `docs/history/`에 기록합니다.
+- 구현 방식 변경 시 `architecture/` 및 `README.md`를 함께 업데이트합니다.
 
-## 핵심 원칙
+### 5. Git 기록 (Version Control)
+- 작업 완료 후 명확한 커밋 메시지와 함께 변경사항을 기록합니다.
+- 불필요한 산출물(build/, node_modules/ 등)이 포함되지 않도록 주의합니다.
 
-- **프로젝트 독립성**: 이 저장소는 상위 워크스페이스 문서에 의존하지 않고도 작업할 수 있어야 합니다.
-- **단일 진입점**: Asset Map 작업의 시작점은 이 파일(`AGENTS.md`)입니다.
-- **SSoT**:
-  - 공통 개발 규칙: `docs/common/rules/*`
-  - 반복 작업 절차: `docs/common/operations/*`
-  - 프로젝트 컨텍스트와 요구사항: `docs/project/*`
-  - 구현 정보: `docs/architecture/*`
-  - 협업 이력: `docs/history/*`
-- **중복 방지**: backend/frontend 내부에는 별도 `AGENTS.md`를 두지 않습니다.
-- **충돌 해결**: 내부 공통 규칙과 프로젝트 문서가 충돌하면 사용자에게 보고하고, 합의된 내용을 내부 문서에 반영합니다.
+---
 
-## 프로젝트 경로
+## ⚖️ 핵심 원칙 (Core Principles)
 
-- Backend: `backend`
-- Frontend: `frontend`
-- Docs: `docs`
+| 원칙 | 설명 |
+| --- | --- |
+| **독립성 (Isolation)** | 상위 워크스페이스에 의존하지 않고 이 저장소만으로 작업이 가능해야 함 |
+| **단일 진입점 (SSoT)** | AI 작업의 모든 시작점은 항상 이 파일(`AGENTS.md`)임 |
+| **문서 우선 (Docs First)** | 코드 변경보다 문서화된 계약(API, 도메인 규칙)을 우선시함 |
+| **투명성 (Transparency)** | 의사결정 과정과 프롬프트 이력을 `docs/history/`에 남겨 맥락을 보존함 |
+
+---
+
+## 📂 프로젝트 주요 경로
+
+- **Backend**: `backend/` (Spring Boot)
+- **Frontend**: `frontend/` (Next.js)
+- **Documents**: `docs/` (Architecture, History, Rules)
