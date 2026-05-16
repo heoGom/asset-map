@@ -33,8 +33,8 @@ public class AssetDashboardService {
 		this.classificationRepository = classificationRepository;
 	}
 
-	public AssetSummaryResponse summary() {
-		List<Holding> holdings = holdingRepository.findAll();
+	public AssetSummaryResponse summary(Long userId) {
+		List<Holding> holdings = holdingRepository.findByUserId(userId);
 		BigDecimal totalInvested = holdings.stream()
 				.map(holding -> MoneyCalculator.amount(holding.getQuantity(), holding.getAveragePrice()))
 				.reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -49,8 +49,8 @@ public class AssetDashboardService {
 		);
 	}
 
-	public List<AccountAssetRatioResponse> byAccount() {
-		List<Holding> holdings = holdingRepository.findAll();
+	public List<AccountAssetRatioResponse> byAccount(Long userId) {
+		List<Holding> holdings = holdingRepository.findByUserId(userId);
 		BigDecimal total = totalEvaluatedAmount(holdings);
 		Map<Long, AccountBucket> buckets = new LinkedHashMap<>();
 		for (Holding holding : holdings) {
@@ -72,27 +72,28 @@ public class AssetDashboardService {
 				.toList();
 	}
 
-	public List<AssetRatioResponse> byCountry() {
-		return byClassification(classification -> classification.getCountryGroup(), CountryGroup.UNKNOWN);
+	public List<AssetRatioResponse> byCountry(Long userId) {
+		return byClassification(userId, classification -> classification.getCountryGroup(), CountryGroup.UNKNOWN);
 	}
 
-	public List<AssetRatioResponse> byType() {
-		return byClassification(classification -> classification.getAssetGroup(), AssetGroup.UNKNOWN);
+	public List<AssetRatioResponse> byType(Long userId) {
+		return byClassification(userId, classification -> classification.getAssetGroup(), AssetGroup.UNKNOWN);
 	}
 
-	public List<AssetRatioResponse> bySector() {
-		return byClassification(classification -> classification.getSector(), Sector.UNKNOWN);
+	public List<AssetRatioResponse> bySector(Long userId) {
+		return byClassification(userId, classification -> classification.getSector(), Sector.UNKNOWN);
 	}
 
-	public List<AssetRatioResponse> byStrategy() {
-		return byClassification(classification -> classification.getStrategyType(), StrategyType.UNKNOWN);
+	public List<AssetRatioResponse> byStrategy(Long userId) {
+		return byClassification(userId, classification -> classification.getStrategyType(), StrategyType.UNKNOWN);
 	}
 
 	private <T extends Enum<T>> List<AssetRatioResponse> byClassification(
+			Long userId,
 			Function<SecurityClassification, T> classifier,
 			T unknown
 	) {
-		List<Holding> holdings = holdingRepository.findAll();
+		List<Holding> holdings = holdingRepository.findByUserId(userId);
 		BigDecimal total = totalEvaluatedAmount(holdings);
 		Map<String, BigDecimal> amounts = new LinkedHashMap<>();
 		for (Holding holding : holdings) {

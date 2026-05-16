@@ -27,31 +27,32 @@ public class TradeTransactionService {
 	}
 
 	@Transactional
-	public TradeTransactionResponse create(TradeTransactionCreateRequest request) {
-		Account account = accountService.getAccount(request.accountId());
+	public TradeTransactionResponse create(Long userId, TradeTransactionCreateRequest request) {
+		Account account = accountService.getAccountForUser(userId, request.accountId());
 		SecurityItem securityItem = securityItemService.getSecurityItem(request.securityItemId());
 		if (request.tradeType() == TradeType.SELL) {
-			holdingAdjustmentService.validateSellable(request.userId(), account.getId(), securityItem.getId(), request.quantity());
+			holdingAdjustmentService.validateSellable(userId, account.getId(), securityItem.getId(), request.quantity());
 		}
-		TradeTransaction transaction = transactionRepository.save(new TradeTransaction(request.userId(), account, securityItem, request.tradeDate(), request.tradeType(), request.quantity(), request.price(), request.fee(), request.tax(), request.currency(), request.source(), request.memo()));
+		TradeTransaction transaction = transactionRepository.save(new TradeTransaction(userId, account, securityItem, request.tradeDate(), request.tradeType(), request.quantity(), request.price(), request.fee(), request.tax(), request.currency(), request.source(), request.memo()));
 		holdingAdjustmentService.rebuild(transaction.getUserId(), account.getId(), securityItem.getId());
 		return TradeTransactionResponse.from(transaction);
 	}
 
 	public List<TradeTransactionResponse> findAll(Long userId) {
-		List<TradeTransaction> transactions = userId == null ? transactionRepository.findAll() : transactionRepository.findByUserIdOrderByTradeDateAscIdAsc(userId);
-		return transactions.stream().map(TradeTransactionResponse::from).toList();
+		return transactionRepository.findByUserIdOrderByTradeDateAscIdAsc(userId).stream()
+				.map(TradeTransactionResponse::from)
+				.toList();
 	}
 
-	public TradeTransactionResponse findById(Long tradeId) {
-		return TradeTransactionResponse.from(getTradeTransaction(tradeId));
+	public TradeTransactionResponse findById(Long userId, Long tradeId) {
+		return TradeTransactionResponse.from(getTradeTransactionForUser(userId, tradeId));
 	}
 
 	@Transactional
-	public TradeTransactionResponse update(Long tradeId, TradeTransactionUpdateRequest request) {
-		TradeTransaction transaction = getTradeTransaction(tradeId);
+	public TradeTransactionResponse update(Long userId, Long tradeId, TradeTransactionUpdateRequest request) {
+		TradeTransaction transaction = getTradeTransactionForUser(userId, tradeId);
 		PositionKey oldKey = PositionKey.from(transaction);
-		Account account = request.accountId() == null ? null : accountService.getAccount(request.accountId());
+		Account account = request.accountId() == null ? null : accountService.getAccountForUser(userId, request.accountId());
 		SecurityItem securityItem = request.securityItemId() == null ? null : securityItemService.getSecurityItem(request.securityItemId());
 		transaction.update(request, account, securityItem);
 		holdingAdjustmentService.rebuild(oldKey.userId(), oldKey.accountId(), oldKey.securityItemId());
@@ -60,8 +61,8 @@ public class TradeTransactionService {
 	}
 
 	@Transactional
-	public void delete(Long tradeId) {
-		TradeTransaction transaction = getTradeTransaction(tradeId);
+	public void delete(Long userId, Long tradeId) {
+		TradeTransaction transaction = getTradeTransactionForUser(userId, tradeId);
 		PositionKey key = PositionKey.from(transaction);
 		transactionRepository.delete(transaction);
 		holdingAdjustmentService.rebuild(key.userId(), key.accountId(), key.securityItemId());
@@ -69,6 +70,11 @@ public class TradeTransactionService {
 
 	public TradeTransaction getTradeTransaction(Long tradeId) {
 		return transactionRepository.findById(tradeId).orElseThrow(() -> new BusinessException(ErrorCode.COMMON_002));
+	}
+
+	public TradeTransaction getTradeTransactionForUser(Long userId, Long tradeId) {
+		return transactionRepository.findByIdAndUserId(tradeId, userId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.AUTH_004));
 	}
 
 	private record PositionKey(Long userId, Long accountId, Long securityItemId) {

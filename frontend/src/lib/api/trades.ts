@@ -37,7 +37,6 @@ export interface TradeTransactionResponse {
 }
 
 export interface TradeTransactionCreateRequest {
-  userId: number;
   accountId: number;
   securityItemId: number;
   tradeDate: string;
@@ -51,8 +50,7 @@ export interface TradeTransactionCreateRequest {
   memo?: string;
 }
 
-export const getTrades = (userId: number) =>
-  fetchApi<TradeTransactionResponse[]>(`/api/trades?userId=${userId}`);
+export const getTrades = () => fetchApi<TradeTransactionResponse[]>("/api/trades");
 
 export const createTrade = (request: TradeTransactionCreateRequest) =>
   fetchApi<TradeTransactionResponse>("/api/trades", {

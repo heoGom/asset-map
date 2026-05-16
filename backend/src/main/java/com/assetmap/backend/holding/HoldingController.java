@@ -1,5 +1,6 @@
 package com.assetmap.backend.holding;
 
+import com.assetmap.backend.auth.SecurityUtil;
 import com.assetmap.backend.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -29,7 +30,7 @@ public class HoldingController {
 
 	@GetMapping
 	public ApiResponse<List<HoldingResponse>> findAll() {
-		return ApiResponse.success(holdingService.findAll());
+		return ApiResponse.success(holdingService.findAll(SecurityUtil.getCurrentUserId()));
 	}
 
 	@GetMapping("/{holdingId}")

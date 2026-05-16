@@ -44,8 +44,8 @@ public class HoldingService {
 		return HoldingResponse.from(holdingRepository.save(holding));
 	}
 
-	public List<HoldingResponse> findAll() {
-		return holdingRepository.findAll().stream().map(HoldingResponse::from).toList();
+	public List<HoldingResponse> findAll(Long userId) {
+		return holdingRepository.findByUserId(userId).stream().map(HoldingResponse::from).toList();
 	}
 
 	public HoldingResponse findById(Long holdingId) {

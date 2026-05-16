@@ -8,7 +8,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record TradeTransactionCreateRequest(
-		@NotNull Long userId,
 		@NotNull Long accountId,
 		@NotNull Long securityItemId,
 		@NotNull LocalDate tradeDate,

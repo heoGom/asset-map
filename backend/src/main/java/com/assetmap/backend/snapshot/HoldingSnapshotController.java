@@ -1,5 +1,6 @@
 package com.assetmap.backend.snapshot;
 
+import com.assetmap.backend.auth.SecurityUtil;
 import com.assetmap.backend.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -29,19 +30,17 @@ public class HoldingSnapshotController {
 
 	@GetMapping("/timeline")
 	public ApiResponse<List<AssetTimelineResponse>> timeline(
-			@RequestParam Long userId,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
 	) {
-		return ApiResponse.success(snapshotService.timeline(userId, from, to));
+		return ApiResponse.success(snapshotService.timeline(SecurityUtil.getCurrentUserId(), from, to));
 	}
 
 	@GetMapping("/by-account")
 	public ApiResponse<List<AccountTimelineResponse>> byAccount(
-			@RequestParam Long userId,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
 	) {
-		return ApiResponse.success(snapshotService.byAccount(userId, from, to));
+		return ApiResponse.success(snapshotService.byAccount(SecurityUtil.getCurrentUserId(), from, to));
 	}
 }

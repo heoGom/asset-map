@@ -1,5 +1,6 @@
 package com.assetmap.backend.account;
 
+import com.assetmap.backend.auth.SecurityUtil;
 import com.assetmap.backend.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -24,17 +25,17 @@ public class AccountController {
 
 	@PostMapping
 	public ApiResponse<AccountResponse> create(@Valid @RequestBody AccountCreateRequest request) {
-		return ApiResponse.success(accountService.create(request));
+		return ApiResponse.success(accountService.create(SecurityUtil.getCurrentUserId(), request));
 	}
 
 	@GetMapping
 	public ApiResponse<List<AccountResponse>> findAll() {
-		return ApiResponse.success(accountService.findAll());
+		return ApiResponse.success(accountService.findAll(SecurityUtil.getCurrentUserId()));
 	}
 
 	@GetMapping("/{accountId}")
 	public ApiResponse<AccountResponse> findById(@PathVariable Long accountId) {
-		return ApiResponse.success(accountService.findById(accountId));
+		return ApiResponse.success(accountService.findById(SecurityUtil.getCurrentUserId(), accountId));
 	}
 
 	@PatchMapping("/{accountId}")
@@ -42,12 +43,12 @@ public class AccountController {
 			@PathVariable Long accountId,
 			@Valid @RequestBody AccountUpdateRequest request
 	) {
-		return ApiResponse.success(accountService.update(accountId, request));
+		return ApiResponse.success(accountService.update(SecurityUtil.getCurrentUserId(), accountId, request));
 	}
 
 	@DeleteMapping("/{accountId}")
 	public ApiResponse<Void> delete(@PathVariable Long accountId) {
-		accountService.delete(accountId);
+		accountService.delete(SecurityUtil.getCurrentUserId(), accountId);
 		return ApiResponse.successWithoutData();
 	}
 }

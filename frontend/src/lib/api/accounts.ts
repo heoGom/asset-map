@@ -22,7 +22,6 @@ export interface AccountResponse {
 }
 
 export interface AccountCreateRequest {
-  userId: number;
   name: string;
   brokerName?: string;
   accountType: AccountType;

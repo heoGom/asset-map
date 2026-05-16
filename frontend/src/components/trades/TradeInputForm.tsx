@@ -5,14 +5,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccounts } from "@/lib/api/accounts";
 import { getSecurityItems } from "@/lib/api/security-items";
 import { createTrade, TransactionSource, TradeType } from "@/lib/api/trades";
-import { useAuth } from "@/lib/auth-provider";
 
 interface TradeInputFormProps {
   onSuccess: () => void;
 }
 
 export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
-  const { userId } = useAuth();
   const queryClient = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
@@ -47,7 +45,7 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
   const mutation = useMutation({
     mutationFn: createTrade,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["trades", userId] });
+      queryClient.invalidateQueries({ queryKey: ["trades"] });
       queryClient.invalidateQueries({ queryKey: ["holdings"] });
       queryClient.invalidateQueries({ queryKey: ["asset-summary"] });
       queryClient.invalidateQueries({ queryKey: ["asset-by-account"] });
@@ -69,7 +67,6 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
     }
 
     mutation.mutate({
-      userId,
       accountId: Number(form.accountId),
       securityItemId: Number(form.securityItemId),
       tradeDate: form.tradeDate,

@@ -1,5 +1,6 @@
 package com.assetmap.backend.transaction;
 
+import com.assetmap.backend.auth.SecurityUtil;
 import com.assetmap.backend.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -10,7 +11,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -25,27 +25,27 @@ public class TradeTransactionController {
 
 	@PostMapping
 	public ApiResponse<TradeTransactionResponse> create(@Valid @RequestBody TradeTransactionCreateRequest request) {
-		return ApiResponse.success(transactionService.create(request));
+		return ApiResponse.success(transactionService.create(SecurityUtil.getCurrentUserId(), request));
 	}
 
 	@GetMapping
-	public ApiResponse<List<TradeTransactionResponse>> findAll(@RequestParam(required = false) Long userId) {
-		return ApiResponse.success(transactionService.findAll(userId));
+	public ApiResponse<List<TradeTransactionResponse>> findAll() {
+		return ApiResponse.success(transactionService.findAll(SecurityUtil.getCurrentUserId()));
 	}
 
 	@GetMapping("/{tradeId}")
 	public ApiResponse<TradeTransactionResponse> findById(@PathVariable Long tradeId) {
-		return ApiResponse.success(transactionService.findById(tradeId));
+		return ApiResponse.success(transactionService.findById(SecurityUtil.getCurrentUserId(), tradeId));
 	}
 
 	@PatchMapping("/{tradeId}")
 	public ApiResponse<TradeTransactionResponse> update(@PathVariable Long tradeId, @Valid @RequestBody TradeTransactionUpdateRequest request) {
-		return ApiResponse.success(transactionService.update(tradeId, request));
+		return ApiResponse.success(transactionService.update(SecurityUtil.getCurrentUserId(), tradeId, request));
 	}
 
 	@DeleteMapping("/{tradeId}")
 	public ApiResponse<Void> delete(@PathVariable Long tradeId) {
-		transactionService.delete(tradeId);
+		transactionService.delete(SecurityUtil.getCurrentUserId(), tradeId);
 		return ApiResponse.successWithoutData();
 	}
 }

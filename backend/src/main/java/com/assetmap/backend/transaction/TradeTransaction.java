@@ -88,7 +88,6 @@ public class TradeTransaction extends BaseEntity {
 	}
 
 	public void update(TradeTransactionUpdateRequest request, Account account, SecurityItem securityItem) {
-		if (request.userId() != null) this.userId = request.userId();
 		if (account != null) this.account = account;
 		if (securityItem != null) this.securityItem = securityItem;
 		if (request.tradeDate() != null) this.tradeDate = request.tradeDate();

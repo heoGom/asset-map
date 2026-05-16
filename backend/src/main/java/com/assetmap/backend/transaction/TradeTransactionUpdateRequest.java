@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record TradeTransactionUpdateRequest(
-		Long userId,
 		Long accountId,
 		Long securityItemId,
 		LocalDate tradeDate,

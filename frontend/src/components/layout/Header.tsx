@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-provider";
 
 export default function Header() {
-  const { userId, setUserId } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
 
   return (
     <nav className="border-b border-gray-200 bg-white">
@@ -20,15 +20,23 @@ export default function Header() {
             <Link href="/accounts" className="hover:text-emerald-600">계좌 관리</Link>
           </div>
           <div className="flex items-center gap-2 border-l border-gray-200 pl-6">
-            <span className="text-xs text-gray-400">User:</span>
-            <select
-              value={userId}
-              onChange={(e) => setUserId(Number(e.target.value))}
-              className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-sm font-medium focus:outline-none"
-            >
-              <option value={1}>User 1</option>
-              <option value={2}>User 2</option>
-            </select>
+            {isAuthenticated ? (
+              <>
+                <span className="text-sm font-medium text-gray-700">{user?.nickname}</span>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-emerald-600">로그인</Link>
+                <Link href="/signup" className="rounded-lg bg-emerald-600 px-3 py-1 text-sm font-bold text-white hover:bg-emerald-700">회원가입</Link>
+              </>
+            )}
           </div>
         </div>
       </div>

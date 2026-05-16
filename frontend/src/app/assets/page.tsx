@@ -19,10 +19,9 @@ import HoldingTable from "@/components/dashboard/HoldingTable";
 import TradeInputForm from "@/components/trades/TradeInputForm";
 import TradeTable from "@/components/trades/TradeTable";
 import { getTrades } from "@/lib/api/trades";
-import { useAuth } from "@/lib/auth-provider";
+import AuthGate from "@/components/auth/AuthGate";
 
 export default function AssetsPage() {
-  const { userId } = useAuth();
   const [isTradeFormOpen, setIsTradeFormOpen] = useState(false);
   
   const { data: summary } = useQuery({
@@ -69,13 +68,13 @@ export default function AssetsPage() {
 
   const { data: timeline } = useQuery({
     queryKey: ["asset-timeline"],
-    queryFn: () => getAssetTimeline(userId),
+    queryFn: getAssetTimeline,
     retry: false,
   });
 
   const { data: trades } = useQuery({
-    queryKey: ["trades", userId],
-    queryFn: () => getTrades(userId),
+    queryKey: ["trades"],
+    queryFn: getTrades,
     retry: false,
   });
 
@@ -110,6 +109,7 @@ export default function AssetsPage() {
   const hasDataLoadIssue = !summary || !holdings;
 
   return (
+    <AuthGate>
     <div className="min-h-screen bg-gray-50 p-8">
       {hasDataLoadIssue && (
         <div className="mb-4 rounded-lg bg-amber-100 p-2 text-center text-sm text-amber-800">
@@ -181,5 +181,6 @@ export default function AssetsPage() {
         </div>
       </div>
     </div>
+    </AuthGate>
   );
 }

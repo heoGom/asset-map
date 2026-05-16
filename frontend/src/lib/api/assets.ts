@@ -32,4 +32,4 @@ export const getAssetByCountry = () => fetchApi<AssetRatio[]>("/api/assets/by-co
 export const getAssetByType = () => fetchApi<AssetRatio[]>("/api/assets/by-type");
 export const getAssetBySector = () => fetchApi<AssetRatio[]>("/api/assets/by-sector");
 export const getAssetByStrategy = () => fetchApi<AssetRatio[]>("/api/assets/by-strategy");
-export const getAssetTimeline = (userId: number) => fetchApi<AssetTimeline[]>(`/api/snapshots/timeline?userId=${userId}`);
+export const getAssetTimeline = () => fetchApi<AssetTimeline[]>("/api/snapshots/timeline");

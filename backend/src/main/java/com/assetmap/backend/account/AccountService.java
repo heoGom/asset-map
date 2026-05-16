@@ -17,9 +17,9 @@ public class AccountService {
 	}
 
 	@Transactional
-	public AccountResponse create(AccountCreateRequest request) {
+	public AccountResponse create(Long userId, AccountCreateRequest request) {
 		Account account = new Account(
-				request.userId(),
+				userId,
 				request.name(),
 				request.brokerName(),
 				request.accountType(),
@@ -29,28 +29,33 @@ public class AccountService {
 		return AccountResponse.from(accountRepository.save(account));
 	}
 
-	public List<AccountResponse> findAll() {
-		return accountRepository.findAll().stream().map(AccountResponse::from).toList();
+	public List<AccountResponse> findAll(Long userId) {
+		return accountRepository.findByUserId(userId).stream().map(AccountResponse::from).toList();
 	}
 
-	public AccountResponse findById(Long accountId) {
-		return AccountResponse.from(getAccount(accountId));
+	public AccountResponse findById(Long userId, Long accountId) {
+		return AccountResponse.from(getAccountForUser(userId, accountId));
 	}
 
 	@Transactional
-	public AccountResponse update(Long accountId, AccountUpdateRequest request) {
-		Account account = getAccount(accountId);
+	public AccountResponse update(Long userId, Long accountId, AccountUpdateRequest request) {
+		Account account = getAccountForUser(userId, accountId);
 		account.update(request);
 		return AccountResponse.from(account);
 	}
 
 	@Transactional
-	public void delete(Long accountId) {
-		accountRepository.delete(getAccount(accountId));
+	public void delete(Long userId, Long accountId) {
+		accountRepository.delete(getAccountForUser(userId, accountId));
 	}
 
 	public Account getAccount(Long accountId) {
 		return accountRepository.findById(accountId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.COMMON_002));
+	}
+
+	public Account getAccountForUser(Long userId, Long accountId) {
+		return accountRepository.findByIdAndUserId(accountId, userId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.AUTH_004));
 	}
 }

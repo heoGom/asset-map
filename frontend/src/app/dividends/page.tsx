@@ -8,23 +8,24 @@ import {
 } from "@/lib/api/dividends";
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import MonthlyDividendChart from "@/components/dashboard/MonthlyDividendChart";
+import AuthGate from "@/components/auth/AuthGate";
 
 export default function DividendsPage() {
   const { data: summary } = useQuery({
     queryKey: ["dividend-summary"],
-    queryFn: () => getDividendSummary(1),
+    queryFn: getDividendSummary,
     retry: false,
   });
 
   const { data: monthly } = useQuery({
     queryKey: ["dividend-monthly"],
-    queryFn: () => getMonthlyDividends(1),
+    queryFn: () => getMonthlyDividends(),
     retry: false,
   });
 
   const { data: securities } = useQuery({
     queryKey: ["dividend-securities"],
-    queryFn: () => getSecurityDividends(1),
+    queryFn: getSecurityDividends,
     retry: false,
   });
 
@@ -54,6 +55,7 @@ export default function DividendsPage() {
   const hasDataLoadIssue = !summary || !monthly;
 
   return (
+    <AuthGate>
     <div className="min-h-screen bg-gray-50 p-8">
       {hasDataLoadIssue && (
         <div className="mb-4 rounded-lg bg-amber-100 p-2 text-center text-sm text-amber-800">
@@ -122,5 +124,6 @@ export default function DividendsPage() {
         </div>
       </div>
     </div>
+    </AuthGate>
   );
 }

@@ -3,12 +3,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAccounts, createAccount, deleteAccount, AccountType, AccountCreateRequest } from "@/lib/api/accounts";
 import { useState } from "react";
+import AuthGate from "@/components/auth/AuthGate";
 
 export default function AccountsPage() {
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [newAccount, setNewAccount] = useState<Partial<AccountCreateRequest>>({
-    userId: 1,
     accountType: AccountType.GENERAL,
     currency: "KRW",
   });
@@ -24,7 +24,7 @@ export default function AccountsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       setIsFormOpen(false);
-      setNewAccount({ userId: 1, accountType: AccountType.GENERAL, currency: "KRW" });
+      setNewAccount({ accountType: AccountType.GENERAL, currency: "KRW" });
     },
   });
 
@@ -38,6 +38,7 @@ export default function AccountsPage() {
   const displayAccounts = accounts || [];
 
   return (
+    <AuthGate>
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex items-center justify-between">
@@ -139,5 +140,6 @@ export default function AccountsPage() {
         </div>
       </div>
     </div>
+    </AuthGate>
   );
 }

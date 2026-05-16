@@ -112,3 +112,10 @@
 - `GET /api/accounts`, `GET /api/securities`의 `ApiResponse.data` 배열을 거래 입력 폼 select 옵션으로 사용하도록 확인
 - 프론트엔드 `ApiResponse` 타입을 실제 백엔드 응답 구조(`success`, `code`, `message`, `data`)와 일치하도록 수정
 - 계좌/종목 데이터가 없을 때 empty 안내 문구를 표시하고 거래 등록 버튼을 비활성화
+
+### JWT 기반 인증 흐름 추가
+
+- BCrypt 비밀번호 암호화와 JWT 기반 회원가입/로그인, 현재 사용자 조회 API 추가
+- Account와 TradeTransaction API를 로그인 사용자 기준으로 전환하고 타 사용자 계좌 거래를 차단
+- frontend 로그인/회원가입 화면, AuthProvider, Authorization 헤더 처리를 추가하고 개발용 userId 선택 흐름 제거
+- 자산/보유/배당 조회 화면이 인증된 사용자 컨텍스트에서 동작하도록 최소 보정

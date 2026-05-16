@@ -25,11 +25,9 @@ export interface SecurityDividend {
   contributionRatio: number;
 }
 
-export const getDividendSummary = (userId: number) => 
-  fetchApi<DividendSummary>(`/api/dividends/summary?userId=${userId}`);
+export const getDividendSummary = () => fetchApi<DividendSummary>("/api/dividends/summary");
 
-export const getMonthlyDividends = (userId: number, year?: number) => 
-  fetchApi<MonthlyDividend[]>(`/api/dividends/monthly?userId=${userId}${year ? `&year=${year}` : ""}`);
+export const getMonthlyDividends = (year?: number) =>
+  fetchApi<MonthlyDividend[]>(`/api/dividends/monthly${year ? `?year=${year}` : ""}`);
 
-export const getSecurityDividends = (userId: number) => 
-  fetchApi<SecurityDividend[]>(`/api/dividends/by-security?userId=${userId}`);
+export const getSecurityDividends = () => fetchApi<SecurityDividend[]>("/api/dividends/by-security");

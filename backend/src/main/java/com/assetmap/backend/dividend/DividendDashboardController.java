@@ -1,5 +1,6 @@
 package com.assetmap.backend.dividend;
 
+import com.assetmap.backend.auth.SecurityUtil;
 import com.assetmap.backend.common.response.ApiResponse;
 import java.time.LocalDate;
 import java.util.List;
@@ -19,27 +20,26 @@ public class DividendDashboardController {
 	}
 
 	@GetMapping("/summary")
-	public ApiResponse<DividendSummaryResponse> summary(@RequestParam Long userId) {
-		return ApiResponse.success(dashboardService.summary(userId));
+	public ApiResponse<DividendSummaryResponse> summary() {
+		return ApiResponse.success(dashboardService.summary(SecurityUtil.getCurrentUserId()));
 	}
 
 	@GetMapping("/monthly")
 	public ApiResponse<List<MonthlyDividendResponse>> monthly(
-			@RequestParam Long userId,
 			@RequestParam(required = false) Integer year
 	) {
 		int targetYear = year == null ? LocalDate.now().getYear() : year;
-		return ApiResponse.success(dashboardService.monthly(userId, targetYear));
+		return ApiResponse.success(dashboardService.monthly(SecurityUtil.getCurrentUserId(), targetYear));
 	}
 
 	@GetMapping("/yearly")
-	public ApiResponse<List<YearlyDividendResponse>> yearly(@RequestParam Long userId) {
-		return ApiResponse.success(dashboardService.yearly(userId));
+	public ApiResponse<List<YearlyDividendResponse>> yearly() {
+		return ApiResponse.success(dashboardService.yearly(SecurityUtil.getCurrentUserId()));
 	}
 
 	@GetMapping("/by-security")
-	public ApiResponse<List<SecurityDividendResponse>> bySecurity(@RequestParam Long userId) {
-		return ApiResponse.success(dashboardService.bySecurity(userId));
+	public ApiResponse<List<SecurityDividendResponse>> bySecurity() {
+		return ApiResponse.success(dashboardService.bySecurity(SecurityUtil.getCurrentUserId()));
 	}
 
 	@GetMapping("/growth")
