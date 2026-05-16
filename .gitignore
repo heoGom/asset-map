@@ -10,6 +10,15 @@ frontend/.next/
 .env
 .env.*
 
+# Local seed data
+backend/src/main/resources/db/data.local.sql
+backend/src/main/resources/db/seed.local.sql
+backend/src/main/resources/seed/local/**
+frontend/src/lib/mock/local/**
+frontend/src/lib/mock/*.local.ts
+*.local.csv
+*.local.json
+
 # IDE
 .idea/
 .vscode/

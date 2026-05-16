@@ -26,6 +26,13 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
+### Local seed data ###
+src/main/resources/db/data.local.sql
+src/main/resources/db/seed.local.sql
+src/main/resources/seed/local/**
+*.local.csv
+*.local.json
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/

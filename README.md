@@ -105,6 +105,23 @@ cd backend
 
 Backend runs at: `http://localhost:8080`
 
+### Local Seed Data
+
+Git에 실제 투자 데이터나 로컬 seed 파일을 커밋하지 않습니다. 예시 템플릿만 참고하세요.
+
+```bash
+cp backend/src/main/resources/db/data.example.sql backend/src/main/resources/db/data.local.sql
+```
+
+`data.local.sql`에 로컬 개발용 데이터만 작성한 뒤 local profile로 실행합니다.
+
+```bash
+cd backend
+SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
+```
+
+커밋 가능한 파일은 `data.example.sql`, `seed.example.json` 같은 템플릿뿐입니다. `data.local.sql`, `seed.local.sql`, `*.local.csv`, `*.local.json`, `backend/src/main/resources/seed/local/**`는 `.gitignore`로 제외됩니다.
+
 ### Frontend Local
 
 ```bash

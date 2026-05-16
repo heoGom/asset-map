@@ -1,0 +1,21 @@
+{
+  "note": "Example seed template only. Copy to a *.local.json file for local data and keep real investment data out of git.",
+  "accounts": [
+    {
+      "name": "Example Account",
+      "brokerName": "Example Broker",
+      "accountType": "GENERAL",
+      "currency": "KRW"
+    }
+  ],
+  "securities": [
+    {
+      "ticker": "EXAMPLE",
+      "name": "Example Security",
+      "market": "EXCHANGE",
+      "country": "COUNTRY",
+      "currency": "KRW",
+      "securityType": "STOCK"
+    }
+  ]
+}

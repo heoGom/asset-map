@@ -13,16 +13,16 @@ Asset Map 백엔드의 핵심 API를 수동으로 점검할 때 사용하는 시
 ## 검증 순서
 
 1. `GET /api/health`
-2. `POST /api/accounts`
-3. `POST /api/securities`
-4. `POST /api/security-classifications`
-5. `POST /api/holdings`
-6. `GET /api/assets/summary`
-7. `POST /api/snapshots`
-8. `GET /api/snapshots/timeline?userId=1&from=2026-01-01&to=2026-12-31`
-9. `POST /api/dividends/events`
-10. `POST /api/dividends/payments`
-11. `GET /api/dividends/summary?userId=1`
+2. `POST /api/auth/signup`
+3. `POST /api/auth/login`
+4. `GET /api/users/me`
+5. `POST /api/accounts`
+6. `POST /api/securities`
+7. `POST /api/security-classifications`
+8. `GET /api/assets/summary`
+9. `GET /api/snapshots/timeline?from=2026-01-01&to=2026-12-31`
+10. `POST /api/dividends/events`
+11. `GET /api/dividends/summary`
 
 ## 주요 요청 예시
 
@@ -43,14 +43,14 @@ curl http://localhost:8080/api/health
 ```http
 POST /api/accounts
 Content-Type: application/json
+Authorization: Bearer <accessToken>
 
 {
-  "userId": 1,
-  "name": "미래에셋 ISA",
-  "brokerName": "미래에셋증권",
-  "accountType": "ISA",
+  "name": "Example Account",
+  "brokerName": "Example Broker",
+  "accountType": "GENERAL",
   "currency": "KRW",
-  "memo": "절세 계좌"
+  "memo": "local test only"
 }
 ```
 
@@ -71,7 +71,7 @@ curl http://localhost:8080/api/assets/summary
 ### Dividend Summary 확인
 
 ```bash
-curl 'http://localhost:8080/api/dividends/summary?userId=1'
+curl -H 'Authorization: Bearer <accessToken>' http://localhost:8080/api/dividends/summary
 ```
 
 기대 결과:

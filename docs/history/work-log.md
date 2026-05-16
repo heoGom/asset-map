@@ -119,3 +119,9 @@
 - Account와 TradeTransaction API를 로그인 사용자 기준으로 전환하고 타 사용자 계좌 거래를 차단
 - frontend 로그인/회원가입 화면, AuthProvider, Authorization 헤더 처리를 추가하고 개발용 userId 선택 흐름 제거
 - 자산/보유/배당 조회 화면이 인증된 사용자 컨텍스트에서 동작하도록 최소 보정
+
+### 로컬 Seed 데이터 Git 제외
+
+- Git 추적 중이던 `backend/src/main/resources/db/data.sql` seed 파일을 제거
+- 기본 profile에서는 SQL seed를 로드하지 않고, `local` profile에서만 ignored `data.local.sql`/`seed.local.sql`을 선택적으로 로드하도록 변경
+- 예시 템플릿 `data.example.sql`, `seed.example.json`과 로컬 seed 작성 방법을 문서화

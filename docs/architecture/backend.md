@@ -112,6 +112,12 @@ cd backend
 - API Base: `http://localhost:8080`
 - H2 Console: `http://localhost:8080/h2-console/` (JDBC URL: `jdbc:h2:mem:test`)
 
+### 로컬 Seed 데이터
+- 기본 profile은 SQL seed를 로드하지 않습니다.
+- 로컬 개발 데이터는 `backend/src/main/resources/db/data.example.sql`을 `data.local.sql`로 복사해 작성합니다.
+- `data.local.sql`, `seed.local.sql`, `*.local.csv`, `*.local.json`, `backend/src/main/resources/seed/local/**`는 Git 추적 대상에서 제외합니다.
+- 로컬 seed를 사용할 때만 `SPRING_PROFILES_ACTIVE=local ./gradlew bootRun`으로 실행합니다.
+
 ### 테스트 수행
 ```bash
 ./gradlew test
