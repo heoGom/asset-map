@@ -29,6 +29,7 @@ export default function DividendsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedYear, setSelectedYear] = useState(2025);
+  const [isEventPanelOpen, setIsEventPanelOpen] = useState(false);
   const [eventForm, setEventForm] = useState({
     securityItemId: "",
     eventType: "CASH_DIVIDEND" as "CASH_DIVIDEND" | "ETF_DISTRIBUTION",
@@ -130,6 +131,11 @@ export default function DividendsPage() {
     }));
   };
 
+  const openEventFormForSecurity = (securityItemId: number) => {
+    handleSecurityChange(String(securityItemId));
+    setIsEventPanelOpen(true);
+  };
+
   const handleEventSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const dividendPerShare = Number(eventForm.dividendPerShare);
@@ -197,6 +203,17 @@ export default function DividendsPage() {
             <MonthlyDividendChart data={displayMonthly} />
           </div>
 
+          <div className="mb-8">
+            <button
+              type="button"
+              onClick={() => setIsEventPanelOpen((open) => !open)}
+              className="rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white transition-all hover:bg-emerald-700"
+            >
+              {isEventPanelOpen ? "배당 이벤트 닫기" : "배당 이벤트 관리"}
+            </button>
+          </div>
+
+          {isEventPanelOpen && (
           <div className="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
             <form onSubmit={handleEventSubmit} className="space-y-4 rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
               <div>
@@ -259,6 +276,9 @@ export default function DividendsPage() {
 
             <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">배당/분배금 이벤트</h2>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                “내 배당금 생성”은 이 이벤트의 기준일에 내가 보유한 수량을 계산해 실제 내 계좌의 DividendPayment를 만드는 작업입니다.
+              </p>
               {generateMessage && <p className="mt-2 text-sm text-emerald-600">{generateMessage}</p>}
               {generateMutation.isError && <p className="mt-2 text-sm text-rose-600">내 배당금 생성에 실패했습니다.</p>}
               {dividendEvents.length === 0 ? (
@@ -288,7 +308,7 @@ export default function DividendsPage() {
                               disabled={generateMutation.isPending}
                               className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:bg-gray-300"
                             >
-                              내 배당금 생성
+                              내 배당금 계산
                             </button>
                           </td>
                         </tr>
@@ -299,6 +319,7 @@ export default function DividendsPage() {
               )}
             </div>
           </div>
+          )}
 
           <div className="mb-8">
             <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">{t("dividends.bySecurity")}</h2>
@@ -318,7 +339,15 @@ export default function DividendsPage() {
                     <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
                       {displaySecurities.map((s) => (
                         <tr key={s.securityItemId} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                          <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{s.securityName}</td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                            <button
+                              type="button"
+                              onClick={() => openEventFormForSecurity(s.securityItemId)}
+                              className="font-semibold text-emerald-700 hover:text-emerald-800 hover:underline dark:text-emerald-400"
+                            >
+                              {s.securityName}
+                            </button>
+                          </td>
                           <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-300">{s.ticker}</td>
                           <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">{formatCurrency(s.expectedAnnual)}</td>
                           <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">{formatCurrency(s.receivedTotal)}</td>

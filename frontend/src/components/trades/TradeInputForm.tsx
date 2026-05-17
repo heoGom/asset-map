@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccounts } from "@/lib/api/accounts";
@@ -9,9 +9,11 @@ import { createTrade, TransactionSource, TradeType } from "@/lib/api/trades";
 
 interface TradeInputFormProps {
   onSuccess: () => void;
+  initialAccountId?: number;
+  initialSecurityItemId?: number;
 }
 
-export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
+export default function TradeInputForm({ onSuccess, initialAccountId, initialSecurityItemId }: TradeInputFormProps) {
   const queryClient = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
@@ -60,6 +62,15 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
   });
 
   const isSubmitDisabled = mutation.isPending || !hasAccounts || !hasSecurities;
+
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      accountId: initialAccountId ? String(initialAccountId) : prev.accountId,
+      securityItemId: initialSecurityItemId ? String(initialSecurityItemId) : prev.securityItemId,
+      tradeType: TradeType.BUY,
+    }));
+  }, [initialAccountId, initialSecurityItemId]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

@@ -4,9 +4,10 @@ import { useLanguage } from "@/lib/language-provider";
 
 interface HoldingTableProps {
   holdings: HoldingResponse[];
+  onSecurityClick?: (holding: HoldingResponse) => void;
 }
 
-export default function HoldingTable({ holdings }: HoldingTableProps) {
+export default function HoldingTable({ holdings, onSecurityClick }: HoldingTableProps) {
   const { t } = useLanguage();
 
   if (holdings.length === 0) {
@@ -47,28 +48,39 @@ export default function HoldingTable({ holdings }: HoldingTableProps) {
           <tbody className="divide-y divide-gray-200 bg-white dark:bg-gray-900">
             {holdings.map((holding) => (
               <tr key={holding.id} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                  {holding.securityName}
+                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                  {onSecurityClick ? (
+                    <button
+                      type="button"
+                      onClick={() => onSecurityClick(holding)}
+                      title="이 종목의 거래내역 추가"
+                      className="font-semibold text-emerald-700 hover:text-emerald-800 hover:underline dark:text-emerald-400"
+                    >
+                      {holding.securityName}
+                    </button>
+                  ) : (
+                    holding.securityName
+                  )}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-300">
                   {holding.ticker}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-300">
                   {holding.accountName}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">
                   {holding.quantity}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">
                   {formatCurrency(holding.averagePrice)}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">
                   {formatCurrency(holding.currentPrice)}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">
                   {formatCurrency(holding.investedAmount)}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">
                   {formatCurrency(holding.evaluatedAmount)}
                 </td>
                 <td

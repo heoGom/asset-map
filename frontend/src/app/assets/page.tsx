@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getAssetSummary,
@@ -29,6 +29,13 @@ import { getCategoryLabel } from "@/lib/category-labels";
 
 export default function AssetsPage() {
   const [isTradeFormOpen, setIsTradeFormOpen] = useState(false);
+  const [tradeTarget, setTradeTarget] = useState<{
+    accountId?: number;
+    accountName?: string;
+    securityItemId?: number;
+    securityName?: string;
+  } | null>(null);
+  const tradeFormRef = useRef<HTMLDivElement>(null);
   const { language, t } = useLanguage();
   
   const { data: summary } = useQuery({
@@ -119,7 +126,10 @@ export default function AssetsPage() {
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t("assets.title")}</h1>
           <button 
-            onClick={() => setIsTradeFormOpen(!isTradeFormOpen)}
+            onClick={() => {
+              setTradeTarget(null);
+              setIsTradeFormOpen(!isTradeFormOpen);
+            }}
             className="rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 transition-all"
           >
             {isTradeFormOpen ? t("common.close") : t("assets.tradeInput")}
@@ -127,8 +137,18 @@ export default function AssetsPage() {
         </div>
 
         {isTradeFormOpen && (
-          <div className="mb-8">
-            <TradeInputForm onSuccess={() => setIsTradeFormOpen(false)} />
+          <div ref={tradeFormRef} className="mb-8">
+            {tradeTarget?.securityName && (
+              <div className="mb-3 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+                {tradeTarget.accountName ? `${tradeTarget.accountName} / ` : ""}
+                {tradeTarget.securityName} 거래내역을 추가합니다.
+              </div>
+            )}
+            <TradeInputForm
+              onSuccess={() => setIsTradeFormOpen(false)}
+              initialAccountId={tradeTarget?.accountId}
+              initialSecurityItemId={tradeTarget?.securityItemId}
+            />
           </div>
         )}
 
@@ -175,7 +195,21 @@ export default function AssetsPage() {
 
         <div className="mb-8">
           <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">{t("assets.holdingDetail")}</h2>
-          <HoldingTable holdings={displayHoldings} />
+          <HoldingTable
+            holdings={displayHoldings}
+            onSecurityClick={(holding) => {
+              setTradeTarget({
+                accountId: holding.accountId,
+                accountName: holding.accountName,
+                securityItemId: holding.securityItemId,
+                securityName: holding.securityName,
+              });
+              setIsTradeFormOpen(true);
+              window.requestAnimationFrame(() => {
+                tradeFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              });
+            }}
+          />
         </div>
 
         <div className="mb-8">
