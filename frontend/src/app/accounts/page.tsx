@@ -5,9 +5,11 @@ import { getAccounts, createAccount, deleteAccount, AccountType, AccountCreateRe
 import { useState } from "react";
 import Link from "next/link";
 import AuthGate from "@/components/auth/AuthGate";
+import { useLanguage } from "@/lib/language-provider";
 
 export default function AccountsPage() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [newAccount, setNewAccount] = useState<Partial<AccountCreateRequest>>({
     accountType: AccountType.GENERAL,
@@ -40,24 +42,24 @@ export default function AccountsPage() {
 
   return (
     <AuthGate>
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-8 dark:bg-gray-950">
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">계좌 관리</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t("accounts.title")}</h1>
           <button
             onClick={() => setIsFormOpen(!isFormOpen)}
             className="rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white shadow-sm hover:bg-emerald-700 transition-all"
           >
-            {isFormOpen ? "닫기" : "새 계좌 추가"}
+            {isFormOpen ? t("common.close") : t("accounts.newAccount")}
           </button>
         </div>
 
         {isFormOpen && (
           <div className="mb-8 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xl font-bold text-gray-900">신규 계좌 등록</h2>
+            <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">{t("accounts.createTitle")}</h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700">계좌 이름</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">{t("accounts.name")}</label>
                 <input
                   type="text"
                   value={newAccount.name || ""}
@@ -67,7 +69,7 @@ export default function AccountsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">금융사</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">{t("accounts.broker")}</label>
                 <input
                   type="text"
                   value={newAccount.brokerName || ""}
@@ -77,7 +79,7 @@ export default function AccountsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">계좌 유형</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">{t("accounts.type")}</label>
                 <select
                   value={newAccount.accountType}
                   onChange={(e) => setNewAccount({ ...newAccount, accountType: e.target.value as AccountType })}
@@ -89,7 +91,7 @@ export default function AccountsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">통화</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">{t("accounts.currency")}</label>
                 <input
                   type="text"
                   value={newAccount.currency || ""}
@@ -105,7 +107,7 @@ export default function AccountsPage() {
                 className="rounded-xl bg-gray-900 px-6 py-2 font-bold text-white hover:bg-gray-800 transition-all"
                 disabled={!newAccount.name}
               >
-                등록하기
+                {t("accounts.submit")}
               </button>
             </div>
           </div>
@@ -120,7 +122,7 @@ export default function AccountsPage() {
                     {account.accountType}
                   </span>
                   <h3 className="mt-2 text-xl font-bold text-gray-900">{account.name}</h3>
-                  <p className="mt-1 text-sm text-gray-500">{account.brokerName || "금융사 정보 없음"}</p>
+                  <p className="mt-1 text-sm text-gray-500">{account.brokerName || t("accounts.noBroker")}</p>
                 </div>
                 <button
                   onClick={(event) => {
@@ -145,7 +147,7 @@ export default function AccountsPage() {
                   href={`/accounts/${account.id}`}
                   className="inline-flex rounded-lg bg-gray-900 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800"
                 >
-                  상세보기
+                  {t("common.details")}
                 </Link>
               </div>
             </div>
@@ -153,7 +155,7 @@ export default function AccountsPage() {
         </div>
         {displayAccounts.length === 0 && (
           <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
-            등록된 계좌가 없습니다.
+            {t("accounts.noAccounts")}
           </div>
         )}
       </div>

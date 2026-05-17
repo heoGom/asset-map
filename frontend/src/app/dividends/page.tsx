@@ -11,8 +11,10 @@ import SummaryCard from "@/components/dashboard/SummaryCard";
 import MonthlyDividendChart from "@/components/dashboard/MonthlyDividendChart";
 import AuthGate from "@/components/auth/AuthGate";
 import { formatCurrency, formatPercent } from "@/lib/format";
+import { useLanguage } from "@/lib/language-provider";
 
 export default function DividendsPage() {
+  const { t } = useLanguage();
   const { data: summary } = useQuery({
     queryKey: ["dividend-summary"],
     queryFn: getDividendSummary,
@@ -47,22 +49,22 @@ export default function DividendsPage() {
 
   return (
     <AuthGate>
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-8 dark:bg-gray-950">
       {hasDataLoadIssue && (
         <div className="mb-4 rounded-lg bg-amber-100 p-2 text-center text-sm text-amber-800">
-          실제 데이터를 불러오지 못했습니다. 서버 상태와 입력 데이터를 확인하세요.
+          {t("common.noLoad")}
         </div>
       )}
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">배당 대시보드</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t("dividends.title")}</h1>
           <select
             value={selectedYear}
             onChange={(event) => setSelectedYear(Number(event.target.value))}
             className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
           >
             {[2024, 2025, 2026].map((year) => (
-              <option key={year} value={year}>{year}년</option>
+              <option key={year} value={year}>{year}</option>
             ))}
           </select>
         </div>
@@ -70,21 +72,21 @@ export default function DividendsPage() {
         {/* Summary Cards */}
         <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <SummaryCard
-            title="연간 예상 배당금"
+            title={t("dividends.expectedAnnual")}
             value={formatCurrency(displaySummary.expectedAnnualDividend)}
-            subValue={`월평균 ${formatCurrency(displaySummary.monthlyAverageDividend)}`}
+            subValue={`${t("dividends.monthlyAverage")} ${formatCurrency(displaySummary.monthlyAverageDividend)}`}
           />
           <SummaryCard
-            title="배당 수익률 (시가)"
+            title={t("dividends.yieldMarket")}
             value={formatPercent(displaySummary.dividendYieldOnEvaluated)}
-            subValue={`평단대비 ${formatPercent(displaySummary.dividendYieldOnInvested)}`}
+            subValue={`${t("dividends.yieldCost")} ${formatPercent(displaySummary.dividendYieldOnInvested)}`}
           />
           <SummaryCard
-            title="올해 받은 배당금"
+            title={t("dividends.currentYearReceived")}
             value={formatCurrency(displaySummary.currentYearReceived)}
           />
           <SummaryCard
-            title="누적 배당금"
+            title={t("dividends.totalReceived")}
             value={formatCurrency(displaySummary.totalReceived)}
           />
         </div>
@@ -96,7 +98,7 @@ export default function DividendsPage() {
 
         {/* Security Dividend Table */}
         <div className="mb-8">
-          <h2 className="mb-4 text-xl font-bold text-gray-900">종목별 배당 상세</h2>
+          <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">{t("dividends.bySecurity")}</h2>
           <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">

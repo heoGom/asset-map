@@ -141,3 +141,9 @@
 - 자산 스냅샷 기본 조회 범위를 보정해 local seed 기준 자산 성장 타임라인이 표시되도록 했다.
 - 월별 배당금 현황은 지급일 기준 PAID 배당금 집계 값을 사용하고, 2025/2026년 local seed 데이터로 검증했다.
 - `/accounts/{accountId}` 상세 페이지와 계좌별 보유 종목, 거래내역, 배당내역 조회 API를 추가했다.
+
+### Theme/Language 토글 추가
+
+- light/dark 테마 토글을 추가하고, 저장값이 없을 때만 OS `prefers-color-scheme` 기준으로 초기 테마를 결정하도록 했다.
+- 한국어/영어 언어 토글과 내부 dictionary 기반 번역 구조를 추가했다.
+- Header nav와 `/accounts`, `/assets`, `/dividends` 주요 제목/empty state 문구에 언어 전환을 우선 적용했다.

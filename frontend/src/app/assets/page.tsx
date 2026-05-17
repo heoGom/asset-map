@@ -21,9 +21,11 @@ import TradeTable from "@/components/trades/TradeTable";
 import { getTrades } from "@/lib/api/trades";
 import AuthGate from "@/components/auth/AuthGate";
 import { formatCurrency, formatPercent, toFiniteNumber } from "@/lib/format";
+import { useLanguage } from "@/lib/language-provider";
 
 export default function AssetsPage() {
   const [isTradeFormOpen, setIsTradeFormOpen] = useState(false);
+  const { t } = useLanguage();
   
   const { data: summary } = useQuery({
     queryKey: ["asset-summary"],
@@ -98,20 +100,20 @@ export default function AssetsPage() {
 
   return (
     <AuthGate>
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-8 dark:bg-gray-950">
       {hasDataLoadIssue && (
         <div className="mb-4 rounded-lg bg-amber-100 p-2 text-center text-sm text-amber-800">
-          실제 데이터를 불러오지 못했습니다. 서버 상태와 입력 데이터를 확인하세요.
+          {t("common.noLoad")}
         </div>
       )}
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">자산 대시보드</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t("assets.title")}</h1>
           <button 
             onClick={() => setIsTradeFormOpen(!isTradeFormOpen)}
             className="rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 transition-all"
           >
-            {isTradeFormOpen ? "닫기" : "거래 입력"}
+            {isTradeFormOpen ? t("common.close") : t("assets.tradeInput")}
           </button>
         </div>
 
@@ -124,21 +126,21 @@ export default function AssetsPage() {
         {/* Summary Cards */}
         <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <SummaryCard
-            title="총 평가금액"
+            title={t("assets.totalEvaluated")}
             value={formatCurrency(displaySummary.totalEvaluated)}
           />
           <SummaryCard
-            title="총 투자원금"
+            title={t("assets.totalInvested")}
             value={formatCurrency(displaySummary.totalInvested)}
           />
           <SummaryCard
-            title="총 손익"
+            title={t("assets.totalProfitLoss")}
             value={formatCurrency(displaySummary.profitLoss)}
             subValue={formatPercent(displaySummary.profitLossRate)}
             isPositive={toFiniteNumber(displaySummary.profitLoss) >= 0}
           />
           <SummaryCard
-            title="보유 종목 수"
+            title={t("assets.holdingCount")}
             value={`${displaySummary.holdingCount}개`}
           />
         </div>
@@ -150,21 +152,21 @@ export default function AssetsPage() {
 
         {/* Charts Grid */}
         <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          <RatioChart title="계좌별 비중" data={displayAccountRatios} />
-          <RatioChart title="국가별 비중" data={displayCountryRatios} />
-          <RatioChart title="자산유형별 비중" data={displayTypeRatios} />
-          <RatioChart title="섹터별 비중" data={displaySectorRatios} />
-          <RatioChart title="전략별 비중" data={displayStrategyRatios} />
+          <RatioChart title={t("assets.accountRatio")} data={displayAccountRatios} />
+          <RatioChart title={t("assets.countryRatio")} data={displayCountryRatios} />
+          <RatioChart title={t("assets.typeRatio")} data={displayTypeRatios} />
+          <RatioChart title={t("assets.sectorRatio")} data={displaySectorRatios} />
+          <RatioChart title={t("assets.strategyRatio")} data={displayStrategyRatios} />
         </div>
 
         {/* Holdings Table */}
         <div className="mb-8">
-          <h2 className="mb-4 text-xl font-bold text-gray-900">보유 종목 상세</h2>
+          <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">{t("assets.holdingDetail")}</h2>
           <HoldingTable holdings={displayHoldings} />
         </div>
 
         <div className="mb-8">
-          <h2 className="mb-4 text-xl font-bold text-gray-900">거래내역</h2>
+          <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">{t("assets.trades")}</h2>
           <TradeTable trades={displayTrades} />
         </div>
       </div>

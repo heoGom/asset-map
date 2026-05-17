@@ -9,6 +9,7 @@ import {
   Legend,
 } from "recharts";
 import { formatCurrency, toFiniteNumber } from "@/lib/format";
+import { useLanguage } from "@/lib/language-provider";
 
 interface RatioChartProps {
   title: string;
@@ -18,6 +19,7 @@ interface RatioChartProps {
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
 export default function RatioChart({ title, data }: RatioChartProps) {
+  const { t } = useLanguage();
   const chartData = data.map((item) => ({
     name: item.category,
     value: toFiniteNumber(item.amount),
@@ -25,18 +27,18 @@ export default function RatioChart({ title, data }: RatioChartProps) {
 
   if (chartData.length === 0) {
     return (
-      <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-        <h3 className="mb-4 text-lg font-bold text-gray-900">{title}</h3>
-        <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-gray-200 text-sm text-gray-500">
-          표시할 비중 데이터가 없습니다.
+      <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <h3 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">{title}</h3>
+        <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-gray-200 text-sm text-gray-500 dark:border-gray-700">
+          {t("empty.ratio")}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-      <h3 className="mb-4 text-lg font-bold text-gray-900">{title}</h3>
+    <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+      <h3 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">{title}</h3>
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>

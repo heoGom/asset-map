@@ -14,9 +14,11 @@ import HoldingTable from "@/components/dashboard/HoldingTable";
 import TradeTable from "@/components/trades/TradeTable";
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import { formatCurrency, formatPercent, toFiniteNumber } from "@/lib/format";
+import { useLanguage } from "@/lib/language-provider";
 
 export default function AccountDetailPage() {
   const params = useParams<{ accountId: string }>();
+  const { t } = useLanguage();
   const accountId = Number(params.accountId);
   const enabled = Number.isFinite(accountId) && accountId > 0;
 
@@ -55,14 +57,14 @@ export default function AccountDetailPage() {
 
   return (
     <AuthGate>
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-gray-50 p-8 dark:bg-gray-950">
         <div className="mx-auto max-w-7xl">
           <div className="mb-6 flex items-center justify-between">
             <div>
               <Link href="/accounts" className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">
-                계좌 목록
+                {t("accounts.list")}
               </Link>
-              <h1 className="mt-2 text-3xl font-bold text-gray-900">{account?.name || "계좌 상세"}</h1>
+              <h1 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{account?.name || t("accounts.detail")}</h1>
             </div>
           </div>
 
@@ -70,19 +72,19 @@ export default function AccountDetailPage() {
             <div className="mb-8 rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
               <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-5">
                 <div>
-                  <dt className="text-gray-500">증권사명</dt>
+                  <dt className="text-gray-500">{t("accounts.brokerName")}</dt>
                   <dd className="mt-1 font-semibold text-gray-900">{account.brokerName || "-"}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">계좌 유형</dt>
+                  <dt className="text-gray-500">{t("accounts.type")}</dt>
                   <dd className="mt-1 font-semibold text-gray-900">{account.accountType}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">통화</dt>
+                  <dt className="text-gray-500">{t("accounts.currency")}</dt>
                   <dd className="mt-1 font-semibold text-gray-900">{account.currency}</dd>
                 </div>
                 <div className="md:col-span-2">
-                  <dt className="text-gray-500">메모</dt>
+                  <dt className="text-gray-500">{t("accounts.memo")}</dt>
                   <dd className="mt-1 font-semibold text-gray-900">{account.memo || "-"}</dd>
                 </div>
               </dl>
@@ -90,38 +92,38 @@ export default function AccountDetailPage() {
           )}
 
           <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
-            <SummaryCard title="총 평가금액" value={formatCurrency(totalEvaluated)} />
-            <SummaryCard title="총 투자원금" value={formatCurrency(totalInvested)} />
+            <SummaryCard title={t("assets.totalEvaluated")} value={formatCurrency(totalEvaluated)} />
+            <SummaryCard title={t("assets.totalInvested")} value={formatCurrency(totalInvested)} />
             <SummaryCard
-              title="손익"
+              title={t("accounts.profitLoss")}
               value={formatCurrency(profitLoss)}
               subValue={formatPercent(profitLossRate)}
               isPositive={profitLoss >= 0}
             />
-            <SummaryCard title="보유 종목 수" value={`${holdings.length}개`} />
-            <SummaryCard title="배당 내역" value={`${dividendPayments.length}건`} />
+            <SummaryCard title={t("assets.holdingCount")} value={`${holdings.length}개`} />
+            <SummaryCard title={t("accounts.dividendPayments")} value={`${dividendPayments.length}건`} />
           </div>
 
           <section className="mb-8">
-            <h2 className="mb-4 text-xl font-bold text-gray-900">보유 종목</h2>
+            <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">{t("accounts.holdings")}</h2>
             {holdings.length === 0 ? (
-              <EmptyState message="이 계좌에 등록된 보유 종목이 없습니다." />
+              <EmptyState message={t("accounts.noHoldings")} />
             ) : (
               <HoldingTable holdings={holdings} />
             )}
           </section>
 
           <section className="mb-8">
-            <h2 className="mb-4 text-xl font-bold text-gray-900">거래내역</h2>
+            <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">{t("assets.trades")}</h2>
             {trades.length === 0 ? (
-              <EmptyState message="아직 거래내역이 없습니다. 거래를 입력하면 보유 종목이 자동으로 계산됩니다." />
+              <EmptyState message={t("accounts.noTrades")} />
             ) : (
               <TradeTable trades={trades} />
             )}
           </section>
 
           <section className="mb-8">
-            <h2 className="mb-4 text-xl font-bold text-gray-900">배당내역</h2>
+            <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">{t("accounts.dividendPayments")}</h2>
             <DividendPaymentTable payments={dividendPayments} />
           </section>
         </div>
@@ -132,15 +134,17 @@ export default function AccountDetailPage() {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
+    <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900">
       {message}
     </div>
   );
 }
 
 function DividendPaymentTable({ payments }: { payments: Awaited<ReturnType<typeof getAccountDividendPayments>> }) {
+  const { t } = useLanguage();
+
   if (payments.length === 0) {
-    return <EmptyState message="아직 배당 내역이 없습니다." />;
+    return <EmptyState message={t("accounts.noDividends")} />;
   }
 
   return (
