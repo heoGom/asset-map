@@ -147,3 +147,4 @@
 - light/dark 테마 토글을 추가하고, 저장값이 없을 때만 OS `prefers-color-scheme` 기준으로 초기 테마를 결정하도록 했다.
 - 한국어/영어 언어 토글과 내부 dictionary 기반 번역 구조를 추가했다.
 - Header nav와 `/accounts`, `/assets`, `/dividends` 주요 제목/empty state 문구에 언어 전환을 우선 적용했다.
+- 자산 비중 차트의 enum 카테고리 값을 현재 언어에 맞는 표시 라벨로 변환하도록 했다.

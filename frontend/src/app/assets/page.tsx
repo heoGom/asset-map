@@ -10,6 +10,7 @@ import {
   getAssetBySector,
   getAssetByStrategy,
   getAssetTimeline,
+  AssetRatio,
 } from "@/lib/api/assets";
 import { getHoldings } from "@/lib/api/holdings";
 import SummaryCard from "@/components/dashboard/SummaryCard";
@@ -22,10 +23,11 @@ import { getTrades } from "@/lib/api/trades";
 import AuthGate from "@/components/auth/AuthGate";
 import { formatCurrency, formatPercent, toFiniteNumber } from "@/lib/format";
 import { useLanguage } from "@/lib/language-provider";
+import { getCategoryLabel } from "@/lib/category-labels";
 
 export default function AssetsPage() {
   const [isTradeFormOpen, setIsTradeFormOpen] = useState(false);
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   
   const { data: summary } = useQuery({
     queryKey: ["asset-summary"],
@@ -89,10 +91,15 @@ export default function AssetsPage() {
     holdingCount: 0,
   };
   const displayAccountRatios = (accountRatios || []).map(r => ({ category: r.accountName, amount: toFiniteNumber(r.amount), ratio: toFiniteNumber(r.ratio) }));
-  const displayCountryRatios = countryRatios || [];
-  const displayTypeRatios = typeRatios || [];
-  const displaySectorRatios = sectorRatios || [];
-  const displayStrategyRatios = strategyRatios || [];
+  const localizeRatios = (ratios: AssetRatio[] = []) =>
+    ratios.map((ratio) => ({
+      ...ratio,
+      category: getCategoryLabel(ratio.category, language),
+    }));
+  const displayCountryRatios = localizeRatios(countryRatios);
+  const displayTypeRatios = localizeRatios(typeRatios);
+  const displaySectorRatios = localizeRatios(sectorRatios);
+  const displayStrategyRatios = localizeRatios(strategyRatios);
   const displayHoldings = holdings || [];
   const displayTimeline = timeline || [];
   const displayTrades = trades || [];

@@ -1,0 +1,56 @@
+import { Language } from "@/lib/i18n";
+
+const categoryLabels: Record<Language, Record<string, string>> = {
+  ko: {
+    DOMESTIC: "국내",
+    OVERSEAS: "해외",
+    UNKNOWN: "미분류",
+    STOCK: "주식",
+    ETF: "ETF",
+    CASH: "현금",
+    BOND: "채권",
+    REIT: "리츠",
+    CRYPTO: "가상자산",
+    SEMICONDUCTOR: "반도체",
+    DIVIDEND_ETF: "배당 ETF",
+    FINANCE: "금융",
+    INFRASTRUCTURE: "인프라",
+    CONSUMER: "소비재",
+    TECH: "기술",
+    HOLDING_COMPANY: "지주사",
+    OTHER: "기타",
+    DIVIDEND: "배당",
+    GROWTH: "성장",
+    VALUE: "가치",
+    INDEX: "지수",
+    MIXED: "혼합",
+  },
+  en: {
+    DOMESTIC: "Domestic",
+    OVERSEAS: "Overseas",
+    UNKNOWN: "Unclassified",
+    STOCK: "Stock",
+    ETF: "ETF",
+    CASH: "Cash",
+    BOND: "Bond",
+    REIT: "REIT",
+    CRYPTO: "Crypto",
+    SEMICONDUCTOR: "Semiconductor",
+    DIVIDEND_ETF: "Dividend ETF",
+    FINANCE: "Finance",
+    INFRASTRUCTURE: "Infrastructure",
+    CONSUMER: "Consumer",
+    TECH: "Technology",
+    HOLDING_COMPANY: "Holding Company",
+    OTHER: "Other",
+    DIVIDEND: "Dividend",
+    GROWTH: "Growth",
+    VALUE: "Value",
+    INDEX: "Index",
+    MIXED: "Mixed",
+  },
+};
+
+export function getCategoryLabel(category: string, language: Language) {
+  return categoryLabels[language][category] ?? category;
+}
