@@ -13,6 +13,7 @@ import {
   getSecurityDividends,
 } from "@/lib/api/dividends";
 import { getSecurityItems } from "@/lib/api/security-items";
+import { importMyStockDividends, DividendImportResult } from "@/lib/api/dividend-imports";
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import MonthlyDividendChart from "@/components/dashboard/MonthlyDividendChart";
 import AuthGate from "@/components/auth/AuthGate";
@@ -30,6 +31,12 @@ export default function DividendsPage() {
   const queryClient = useQueryClient();
   const [selectedYear, setSelectedYear] = useState(2025);
   const [isEventPanelOpen, setIsEventPanelOpen] = useState(false);
+  const currentYear = new Date().getFullYear();
+  const [importForm, setImportForm] = useState({
+    fromYear: "2020",
+    toYear: String(currentYear),
+  });
+  const [importResult, setImportResult] = useState<DividendImportResult | null>(null);
   const [eventForm, setEventForm] = useState({
     securityItemId: "",
     eventType: "CASH_DIVIDEND" as "CASH_DIVIDEND" | "ETF_DISTRIBUTION",
@@ -110,6 +117,18 @@ export default function DividendsPage() {
     },
   });
 
+  const importMutation = useMutation({
+    mutationFn: importMyStockDividends,
+    onSuccess: (result) => {
+      setImportResult(result);
+      queryClient.invalidateQueries({ queryKey: ["dividend-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["dividend-monthly"] });
+      queryClient.invalidateQueries({ queryKey: ["dividend-securities"] });
+      queryClient.invalidateQueries({ queryKey: ["dividend-events"] });
+      queryClient.invalidateQueries({ queryKey: ["dividend-payments"] });
+    },
+  });
+
   const displaySummary = summary || {
     expectedAnnualDividend: 0,
     monthlyAverageDividend: 0,
@@ -153,6 +172,15 @@ export default function DividendsPage() {
       dividendPerShare,
       currency: eventForm.currency || "KRW",
       source: "MANUAL",
+    });
+  };
+
+  const handleImportSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setImportResult(null);
+    importMutation.mutate({
+      fromYear: Number(importForm.fromYear || 2020),
+      toYear: Number(importForm.toYear || currentYear),
     });
   };
 
@@ -202,6 +230,53 @@ export default function DividendsPage() {
           <div className="mb-8">
             <MonthlyDividendChart data={displayMonthly} />
           </div>
+
+          <form onSubmit={handleImportSubmit} className="mb-8 space-y-4 rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+            <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">내 종목 배당정보 가져오기</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  국내 개별주/우선주 배당정보만 가져옵니다. ETF 분배금은 자동 연동 대상이 아니며 수동 입력을 사용합니다.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 md:w-64">
+                <label className={labelClass}>
+                  시작연도
+                  <input
+                    type="number"
+                    min="2020"
+                    value={importForm.fromYear}
+                    onChange={(event) => setImportForm({ ...importForm, fromYear: event.target.value })}
+                    className={inputClass}
+                  />
+                </label>
+                <label className={labelClass}>
+                  종료연도
+                  <input
+                    type="number"
+                    min="2020"
+                    value={importForm.toYear}
+                    onChange={(event) => setImportForm({ ...importForm, toYear: event.target.value })}
+                    className={inputClass}
+                  />
+                </label>
+              </div>
+            </div>
+            {importResult && (
+              <div className="rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                대상 {importResult.targetSecurityCount}개, 저장 {importResult.importedEventCount}건, 건너뜀 {importResult.skippedEventCount}건,
+                내 배당금 생성 {importResult.generatedPaymentCount}건, 실패 종목 {importResult.failedSecurityCount}개
+              </div>
+            )}
+            {importMutation.isError && (
+              <p className="text-sm text-rose-600">
+                배당정보 가져오기에 실패했습니다. API 키 설정과 대상 종목을 확인하세요.
+              </p>
+            )}
+            <button type="submit" disabled={importMutation.isPending} className="rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white transition-all hover:bg-emerald-700 disabled:bg-gray-300">
+              {importMutation.isPending ? "가져오는 중" : "내 종목 배당정보 가져오기"}
+            </button>
+          </form>
 
           <div className="mb-8">
             <button

@@ -155,3 +155,10 @@
 - `/assets`에 보유 종목 현재가 수동 입력 흐름을 추가하고, `MarketPrice` 저장 시 `Holding.currentPrice`를 갱신하도록 연결했다.
 - `/dividends`에 배당/분배금 이벤트 직접 입력과 내 배당금 생성 흐름을 추가했다.
 - 거래 입력 폼에서 종목이 없을 때 종목 등록 화면으로 이동할 수 있게 했다.
+
+### 금융위원회 주식배당정보 import 추가
+
+- 공공데이터포털 금융위원회 주식배당정보 API를 `PUBLIC_DATA_STOCK_DIVIDEND_SERVICE_KEY` 환경변수 기반으로 호출하도록 추가했다.
+- 현재 사용자 보유/거래 내역에 등장한 국내 `STOCK` 종목만 대상으로 2020년 이후 배당기준일 데이터를 import한다.
+- import된 데이터는 `DividendEvent`로 저장하고 기존 `DividendPayment` 생성 서비스를 재사용해 계좌별 내 배당금을 자동 생성한다.
+- ETF 분배금은 자동 import 대상에서 제외하고 기존 수동 입력 흐름을 유지한다.

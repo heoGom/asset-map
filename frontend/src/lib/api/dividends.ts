@@ -87,7 +87,7 @@ export interface DividendEventResponse {
   eventType?: "CASH_DIVIDEND" | "ETF_DISTRIBUTION";
   dividendPerShare: number;
   currency: string;
-  source: "MANUAL" | "API" | "CSV" | "CRAWLING";
+  source: "MANUAL" | "PUBLIC_DATA_STOCK_DIVIDEND" | "API" | "CSV" | "CRAWLING";
 }
 
 export interface DividendEventCreateRequest {
