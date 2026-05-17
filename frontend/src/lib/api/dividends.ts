@@ -74,6 +74,43 @@ export interface DividendPaymentResponse {
   updatedAt: string;
 }
 
+export interface DividendEventResponse {
+  id: number;
+  securityItemId: number;
+  ticker: string;
+  securityName: string;
+  dividendYear: number;
+  declarationDate?: string;
+  exDividendDate?: string;
+  recordDate: string;
+  paymentDate?: string;
+  eventType?: "CASH_DIVIDEND" | "ETF_DISTRIBUTION";
+  dividendPerShare: number;
+  currency: string;
+  source: "MANUAL" | "API" | "CSV" | "CRAWLING";
+}
+
+export interface DividendEventCreateRequest {
+  securityItemId: number;
+  dividendYear: number;
+  declarationDate?: string;
+  exDividendDate?: string;
+  recordDate: string;
+  paymentDate?: string;
+  eventType?: "CASH_DIVIDEND" | "ETF_DISTRIBUTION";
+  dividendPerShare: number;
+  currency: string;
+  source: "MANUAL";
+}
+
+export interface DividendPaymentGenerateResponse {
+  dividendEventId: number;
+  generatedCount: number;
+  totalGrossAmount: number;
+  totalNetAmount: number;
+  payments: DividendPaymentResponse[];
+}
+
 export const getDividendSummary = async (): Promise<DividendSummary> => {
   const summary = await fetchApi<DividendSummaryResponse>("/api/dividends/summary");
   return {
@@ -107,3 +144,19 @@ export const getSecurityDividends = async (): Promise<SecurityDividend[]> => {
     contributionRatio: item.contributionRatio,
   }));
 };
+
+export const getDividendEvents = () => fetchApi<DividendEventResponse[]>("/api/dividends/events");
+
+export const createDividendEvent = (request: DividendEventCreateRequest) =>
+  fetchApi<DividendEventResponse>("/api/dividends/events", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+
+export const generateMyDividendPayments = (eventId: number) =>
+  fetchApi<DividendPaymentGenerateResponse>(`/api/dividends/payments/generate/me/${eventId}`, {
+    method: "POST",
+  });
+
+export const getMyDividendPayments = (userId: number) =>
+  fetchApi<DividendPaymentResponse[]>(`/api/dividends/payments/user/${userId}`);

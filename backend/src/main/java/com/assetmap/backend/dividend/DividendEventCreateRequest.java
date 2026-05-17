@@ -13,6 +13,7 @@ public record DividendEventCreateRequest(
 		LocalDate exDividendDate,
 		@NotNull LocalDate recordDate,
 		LocalDate paymentDate,
+		DividendEventType eventType,
 		@NotNull @PositiveOrZero BigDecimal dividendPerShare,
 		@NotBlank String currency,
 		@NotNull DataSourceType source

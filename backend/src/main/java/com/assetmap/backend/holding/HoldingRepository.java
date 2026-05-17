@@ -10,5 +10,7 @@ public interface HoldingRepository extends JpaRepository<Holding, Long> {
 
 	List<Holding> findByUserIdAndAccountId(Long userId, Long accountId);
 
+	List<Holding> findBySecurityItemId(Long securityItemId);
+
 	Optional<Holding> findByUserIdAndAccountIdAndSecurityItemId(Long userId, Long accountId, Long securityItemId);
 }

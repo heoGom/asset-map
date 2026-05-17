@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccounts } from "@/lib/api/accounts";
 import { getSecurityItems } from "@/lib/api/security-items";
@@ -82,21 +83,21 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">거래 입력</h2>
-        <p className="mt-1 text-sm text-gray-500">초기 보유 등록은 거래유형 INITIAL을 사용합니다.</p>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">거래 입력</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">초기 보유 등록은 거래유형 초기 보유를 사용합니다.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
           계좌
           <select
             required
             value={form.accountId}
             disabled={!hasAccounts}
             onChange={(event) => setForm({ ...form, accountId: event.target.value })}
-            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           >
             <option value="">계좌 선택</option>
             {accounts.map((account) => (
@@ -108,14 +109,19 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
           )}
         </label>
 
-        <label className="block text-sm font-medium text-gray-700">
-          종목
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+          <span className="flex items-center justify-between gap-2">
+            <span>종목</span>
+            <Link href="/securities" className="text-xs font-semibold text-emerald-600 hover:text-emerald-700">
+              새 종목 등록
+            </Link>
+          </span>
           <select
             required
             value={form.securityItemId}
             disabled={!hasSecurities}
             onChange={(event) => setForm({ ...form, securityItemId: event.target.value })}
-            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           >
             <option value="">종목 선택</option>
             {securities.map((security) => (
@@ -129,32 +135,34 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
           )}
         </label>
 
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
           거래일
           <input
             required
             type="date"
             value={form.tradeDate}
             onChange={(event) => setForm({ ...form, tradeDate: event.target.value })}
-            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           />
         </label>
 
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
           거래유형
           <select
             required
             value={form.tradeType}
             onChange={(event) => setForm({ ...form, tradeType: event.target.value as TradeType })}
-            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           >
             {Object.values(TradeType).map((type) => (
-              <option key={type} value={type}>{type}</option>
+              <option key={type} value={type}>
+                {type === TradeType.INITIAL ? "초기 보유" : type === TradeType.BUY ? "매수" : "매도"}
+              </option>
             ))}
           </select>
         </label>
 
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
           수량
           <input
             required
@@ -163,11 +171,11 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
             type="number"
             value={form.quantity}
             onChange={(event) => setForm({ ...form, quantity: event.target.value })}
-            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           />
         </label>
 
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
           단가
           <input
             required
@@ -176,11 +184,11 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
             type="number"
             value={form.price}
             onChange={(event) => setForm({ ...form, price: event.target.value })}
-            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           />
         </label>
 
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
           수수료
           <input
             min="0"
@@ -188,11 +196,11 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
             type="number"
             value={form.fee}
             onChange={(event) => setForm({ ...form, fee: event.target.value })}
-            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           />
         </label>
 
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
           세금
           <input
             min="0"
@@ -200,27 +208,27 @@ export default function TradeInputForm({ onSuccess }: TradeInputFormProps) {
             type="number"
             value={form.tax}
             onChange={(event) => setForm({ ...form, tax: event.target.value })}
-            className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           />
         </label>
 
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
           통화
           <input
             readOnly
             value={currency}
-            className="mt-1 block w-full rounded-lg border border-gray-200 bg-gray-50 p-2 text-gray-600"
+            className="mt-1 block w-full rounded-lg border border-gray-200 bg-gray-50 p-2 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
           />
         </label>
       </div>
 
-      <label className="block text-sm font-medium text-gray-700">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
         메모
         <input
           type="text"
           value={form.memo}
           onChange={(event) => setForm({ ...form, memo: event.target.value })}
-          className="mt-1 block w-full rounded-lg border border-gray-300 p-2"
+          className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
         />
       </label>
 

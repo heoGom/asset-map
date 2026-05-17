@@ -35,6 +35,9 @@ public class DividendEvent extends BaseEntity {
 	private LocalDate recordDate;
 	private LocalDate paymentDate;
 
+	@Enumerated(EnumType.STRING)
+	private DividendEventType eventType;
+
 	@Column(nullable = false, precision = 19, scale = 6)
 	private BigDecimal dividendPerShare;
 
@@ -48,13 +51,14 @@ public class DividendEvent extends BaseEntity {
 	protected DividendEvent() {
 	}
 
-	public DividendEvent(SecurityItem securityItem, Integer dividendYear, LocalDate declarationDate, LocalDate exDividendDate, LocalDate recordDate, LocalDate paymentDate, BigDecimal dividendPerShare, String currency, DataSourceType source) {
+	public DividendEvent(SecurityItem securityItem, Integer dividendYear, LocalDate declarationDate, LocalDate exDividendDate, LocalDate recordDate, LocalDate paymentDate, DividendEventType eventType, BigDecimal dividendPerShare, String currency, DataSourceType source) {
 		this.securityItem = securityItem;
 		this.dividendYear = dividendYear;
 		this.declarationDate = declarationDate;
 		this.exDividendDate = exDividendDate;
 		this.recordDate = recordDate;
 		this.paymentDate = paymentDate;
+		this.eventType = eventType;
 		this.dividendPerShare = dividendPerShare;
 		this.currency = currency;
 		this.source = source;
@@ -67,6 +71,7 @@ public class DividendEvent extends BaseEntity {
 		if (request.exDividendDate() != null) this.exDividendDate = request.exDividendDate();
 		if (request.recordDate() != null) this.recordDate = request.recordDate();
 		if (request.paymentDate() != null) this.paymentDate = request.paymentDate();
+		if (request.eventType() != null) this.eventType = request.eventType();
 		if (request.dividendPerShare() != null) this.dividendPerShare = request.dividendPerShare();
 		if (request.currency() != null) this.currency = request.currency();
 		if (request.source() != null) this.source = request.source();
@@ -79,6 +84,7 @@ public class DividendEvent extends BaseEntity {
 	public LocalDate getExDividendDate() { return exDividendDate; }
 	public LocalDate getRecordDate() { return recordDate; }
 	public LocalDate getPaymentDate() { return paymentDate; }
+	public DividendEventType getEventType() { return eventType; }
 	public BigDecimal getDividendPerShare() { return dividendPerShare; }
 	public String getCurrency() { return currency; }
 	public DataSourceType getSource() { return source; }

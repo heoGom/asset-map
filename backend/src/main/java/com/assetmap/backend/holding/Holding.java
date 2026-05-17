@@ -81,6 +81,10 @@ public class Holding extends BaseEntity {
 		this.currency = currency;
 	}
 
+	public void updateCurrentPrice(BigDecimal currentPrice) {
+		this.currentPrice = currentPrice;
+	}
+
 	public Long getId() {
 		return id;
 	}

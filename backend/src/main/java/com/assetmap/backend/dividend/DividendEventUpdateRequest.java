@@ -12,6 +12,7 @@ public record DividendEventUpdateRequest(
 		LocalDate exDividendDate,
 		LocalDate recordDate,
 		LocalDate paymentDate,
+		DividendEventType eventType,
 		@PositiveOrZero BigDecimal dividendPerShare,
 		@Pattern(regexp = ".*\\S.*") String currency,
 		DataSourceType source

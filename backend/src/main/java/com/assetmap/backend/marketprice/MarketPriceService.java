@@ -2,6 +2,7 @@ package com.assetmap.backend.marketprice;
 
 import com.assetmap.backend.common.exception.BusinessException;
 import com.assetmap.backend.common.exception.ErrorCode;
+import com.assetmap.backend.holding.HoldingRepository;
 import com.assetmap.backend.securityitem.SecurityItem;
 import com.assetmap.backend.securityitem.SecurityItemService;
 import java.math.BigDecimal;
@@ -17,11 +18,13 @@ public class MarketPriceService {
 	private final MarketPriceRepository marketPriceRepository;
 	private final SecurityItemService securityItemService;
 	private final MarketPriceProvider marketPriceProvider;
+	private final HoldingRepository holdingRepository;
 
-	public MarketPriceService(MarketPriceRepository marketPriceRepository, SecurityItemService securityItemService, MarketPriceProvider marketPriceProvider) {
+	public MarketPriceService(MarketPriceRepository marketPriceRepository, SecurityItemService securityItemService, MarketPriceProvider marketPriceProvider, HoldingRepository holdingRepository) {
 		this.marketPriceRepository = marketPriceRepository;
 		this.securityItemService = securityItemService;
 		this.marketPriceProvider = marketPriceProvider;
+		this.holdingRepository = holdingRepository;
 	}
 
 	@Transactional
@@ -38,7 +41,9 @@ public class MarketPriceService {
 				request.source(),
 				LocalDateTime.now()
 		);
-		return MarketPriceResponse.from(marketPriceRepository.save(marketPrice));
+		MarketPrice saved = marketPriceRepository.save(marketPrice);
+		updateHoldingsIfLatest(saved);
+		return MarketPriceResponse.from(saved);
 	}
 
 	public List<MarketPriceResponse> findBySecurityItemId(Long securityItemId) {
@@ -53,6 +58,18 @@ public class MarketPriceService {
 	@Transactional
 	public MarketPriceResponse refresh(MarketPriceRefreshRequest request) {
 		SecurityItem securityItem = securityItemService.getSecurityItem(request.securityItemId());
-		return MarketPriceResponse.from(marketPriceRepository.save(marketPriceProvider.fetch(securityItem, request.priceDate())));
+		MarketPrice saved = marketPriceRepository.save(marketPriceProvider.fetch(securityItem, request.priceDate()));
+		updateHoldingsIfLatest(saved);
+		return MarketPriceResponse.from(saved);
+	}
+
+	private void updateHoldingsIfLatest(MarketPrice marketPrice) {
+		MarketPrice latest = marketPriceRepository.findFirstBySecurityItemIdOrderByPriceDateDescFetchedAtDesc(marketPrice.getSecurityItem().getId())
+				.orElse(marketPrice);
+		if (!latest.getId().equals(marketPrice.getId())) {
+			return;
+		}
+		holdingRepository.findBySecurityItemId(marketPrice.getSecurityItem().getId())
+				.forEach(holding -> holding.updateCurrentPrice(marketPrice.getCurrentPrice()));
 	}
 }

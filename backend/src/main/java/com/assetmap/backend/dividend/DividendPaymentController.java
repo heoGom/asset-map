@@ -1,6 +1,7 @@
 package com.assetmap.backend.dividend;
 
 import com.assetmap.backend.common.response.ApiResponse;
+import com.assetmap.backend.auth.SecurityUtil;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,6 +31,11 @@ public class DividendPaymentController {
 	@PostMapping("/generate")
 	public ApiResponse<DividendPaymentGenerateResponse> generate(@Valid @RequestBody DividendPaymentGenerateRequest request) {
 		return ApiResponse.success(paymentService.generate(request));
+	}
+
+	@PostMapping("/generate/me/{eventId}")
+	public ApiResponse<DividendPaymentGenerateResponse> generateForCurrentUser(@PathVariable Long eventId) {
+		return ApiResponse.success(paymentService.generate(new DividendPaymentGenerateRequest(SecurityUtil.getCurrentUserId(), eventId)));
 	}
 
 	@GetMapping

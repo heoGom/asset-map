@@ -21,6 +21,7 @@ export default function Header() {
           <div className="flex gap-6 text-sm font-medium text-gray-600 dark:text-gray-300">
             <Link href="/assets" className="hover:text-emerald-600">{t("nav.assets")}</Link>
             <Link href="/dividends" className="hover:text-emerald-600">{t("nav.dividends")}</Link>
+            <Link href="/securities" className="hover:text-emerald-600">{t("nav.securities")}</Link>
             <Link href="/accounts" className="hover:text-emerald-600">{t("nav.accounts")}</Link>
           </div>
           <div className="flex items-center gap-2 border-l border-gray-200 pl-4 dark:border-gray-700">

@@ -23,7 +23,7 @@ public class DividendEventService {
 	@Transactional
 	public DividendEventResponse create(DividendEventCreateRequest request) {
 		SecurityItem securityItem = securityItemService.getSecurityItem(request.securityItemId());
-		DividendEvent event = new DividendEvent(securityItem, request.dividendYear(), request.declarationDate(), request.exDividendDate(), request.recordDate(), request.paymentDate(), request.dividendPerShare(), request.currency(), request.source());
+		DividendEvent event = new DividendEvent(securityItem, request.dividendYear(), request.declarationDate(), request.exDividendDate(), request.recordDate(), request.paymentDate(), request.eventType(), request.dividendPerShare(), request.currency(), request.source());
 		return DividendEventResponse.from(dividendEventRepository.save(event));
 	}
 
