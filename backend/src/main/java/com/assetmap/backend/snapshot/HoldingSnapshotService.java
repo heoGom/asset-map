@@ -83,8 +83,8 @@ public class HoldingSnapshotService {
 	}
 
 	private List<HoldingSnapshot> snapshots(Long userId, LocalDate from, LocalDate to) {
-		LocalDate start = from == null ? LocalDate.MIN : from;
-		LocalDate end = to == null ? LocalDate.MAX : to;
+		LocalDate start = from == null ? LocalDate.of(1900, 1, 1) : from;
+		LocalDate end = to == null ? LocalDate.of(9999, 12, 31) : to;
 		return snapshotRepository.findByUserIdAndSnapshotDateBetweenOrderBySnapshotDateAsc(userId, start, end);
 	}
 

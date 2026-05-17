@@ -8,6 +8,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { formatCurrency, toFiniteNumber } from "@/lib/format";
 
 interface RatioChartProps {
   title: string;
@@ -19,8 +20,19 @@ const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"
 export default function RatioChart({ title, data }: RatioChartProps) {
   const chartData = data.map((item) => ({
     name: item.category,
-    value: item.amount,
-  }));
+    value: toFiniteNumber(item.amount),
+  })).filter((item) => item.value > 0);
+
+  if (chartData.length === 0) {
+    return (
+      <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+        <h3 className="mb-4 text-lg font-bold text-gray-900">{title}</h3>
+        <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-gray-200 text-sm text-gray-500">
+          표시할 비중 데이터가 없습니다.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
@@ -42,12 +54,7 @@ export default function RatioChart({ title, data }: RatioChartProps) {
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: any) =>
-                new Intl.NumberFormat("ko-KR", {
-                  style: "currency",
-                  currency: "KRW",
-                }).format(Number(value || 0))
-              }
+              formatter={(value: any) => formatCurrency(value)}
             />
             <Legend verticalAlign="bottom" height={36} />
           </PieChart>

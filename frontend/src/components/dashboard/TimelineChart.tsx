@@ -9,25 +9,34 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { formatCompactCurrency, formatCurrency, toFiniteNumber } from "@/lib/format";
 
 interface TimelineChartProps {
   data: { date: string; totalAssetAmount: number }[];
 }
 
 export default function TimelineChart({ data }: TimelineChartProps) {
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("ko-KR", {
-      style: "currency",
-      currency: "KRW",
-      notation: "compact",
-    }).format(value);
+  const chartData = data
+    .map((item) => ({
+      date: item.date,
+      totalAssetAmount: toFiniteNumber(item.totalAssetAmount),
+    }))
+    .filter((item) => item.date);
+
+  const hasData = chartData.some((item) => item.totalAssetAmount > 0);
 
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
       <h3 className="mb-6 text-lg font-bold text-gray-900">자산 성장 타임라인</h3>
+      {!hasData && (
+        <div className="flex h-80 items-center justify-center rounded-lg border border-dashed border-gray-200 text-sm text-gray-500">
+          자산 스냅샷 데이터가 없습니다.
+        </div>
+      )}
+      {hasData && (
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
             <XAxis
               dataKey="date"
@@ -40,14 +49,11 @@ export default function TimelineChart({ data }: TimelineChartProps) {
               axisLine={false}
               tickLine={false}
               tick={{ fill: "#9ca3af", fontSize: 12 }}
-              tickFormatter={formatCurrency}
+              tickFormatter={formatCompactCurrency}
             />
             <Tooltip
               formatter={(value: any) => [
-                new Intl.NumberFormat("ko-KR", {
-                  style: "currency",
-                  currency: "KRW",
-                }).format(Number(value || 0)),
+                formatCurrency(value),
                 "총 자산",
               ]}
               contentStyle={{
@@ -67,6 +73,7 @@ export default function TimelineChart({ data }: TimelineChartProps) {
           </LineChart>
         </ResponsiveContainer>
       </div>
+      )}
     </div>
   );
 }

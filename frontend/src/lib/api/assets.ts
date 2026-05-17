@@ -8,6 +8,14 @@ export interface AssetSummary {
   holdingCount: number;
 }
 
+interface AssetSummaryResponse {
+  totalInvestedAmount: number;
+  totalEvaluatedAmount: number;
+  totalProfitLoss: number;
+  totalProfitLossRate: number;
+  holdingCount: number;
+}
+
 export interface AssetRatio {
   category: string;
   amount: number;
@@ -26,7 +34,16 @@ export interface AssetTimeline {
   totalAssetAmount: number;
 }
 
-export const getAssetSummary = () => fetchApi<AssetSummary>("/api/assets/summary");
+export const getAssetSummary = async (): Promise<AssetSummary> => {
+  const summary = await fetchApi<AssetSummaryResponse>("/api/assets/summary");
+  return {
+    totalInvested: summary.totalInvestedAmount,
+    totalEvaluated: summary.totalEvaluatedAmount,
+    profitLoss: summary.totalProfitLoss,
+    profitLossRate: summary.totalProfitLossRate,
+    holdingCount: summary.holdingCount,
+  };
+};
 export const getAssetByAccount = () => fetchApi<AccountAssetRatio[]>("/api/assets/by-account");
 export const getAssetByCountry = () => fetchApi<AssetRatio[]>("/api/assets/by-country");
 export const getAssetByType = () => fetchApi<AssetRatio[]>("/api/assets/by-type");

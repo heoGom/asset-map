@@ -48,6 +48,13 @@ public class HoldingService {
 		return holdingRepository.findByUserId(userId).stream().map(HoldingResponse::from).toList();
 	}
 
+	public List<HoldingResponse> findByAccount(Long userId, Long accountId) {
+		accountService.getAccountForUser(userId, accountId);
+		return holdingRepository.findByUserIdAndAccountId(userId, accountId).stream()
+				.map(HoldingResponse::from)
+				.toList();
+	}
+
 	public HoldingResponse findById(Long holdingId) {
 		return HoldingResponse.from(getHolding(holdingId));
 	}

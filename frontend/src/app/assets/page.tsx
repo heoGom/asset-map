@@ -20,6 +20,7 @@ import TradeInputForm from "@/components/trades/TradeInputForm";
 import TradeTable from "@/components/trades/TradeTable";
 import { getTrades } from "@/lib/api/trades";
 import AuthGate from "@/components/auth/AuthGate";
+import { formatCurrency, formatPercent, toFiniteNumber } from "@/lib/format";
 
 export default function AssetsPage() {
   const [isTradeFormOpen, setIsTradeFormOpen] = useState(false);
@@ -78,19 +79,6 @@ export default function AssetsPage() {
     retry: false,
   });
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("ko-KR", {
-      style: "currency",
-      currency: "KRW",
-      maximumFractionDigits: 0,
-    }).format(value);
-
-  const formatPercent = (value: number) =>
-    new Intl.NumberFormat("ko-KR", {
-      style: "percent",
-      minimumFractionDigits: 2,
-    }).format(value);
-
   const displaySummary = summary || {
     totalInvested: 0,
     totalEvaluated: 0,
@@ -98,7 +86,7 @@ export default function AssetsPage() {
     profitLossRate: 0,
     holdingCount: 0,
   };
-  const displayAccountRatios = (accountRatios || []).map(r => ({ category: r.accountName, amount: r.amount, ratio: r.ratio }));
+  const displayAccountRatios = (accountRatios || []).map(r => ({ category: r.accountName, amount: toFiniteNumber(r.amount), ratio: toFiniteNumber(r.ratio) }));
   const displayCountryRatios = countryRatios || [];
   const displayTypeRatios = typeRatios || [];
   const displaySectorRatios = sectorRatios || [];
@@ -147,7 +135,7 @@ export default function AssetsPage() {
             title="총 손익"
             value={formatCurrency(displaySummary.profitLoss)}
             subValue={formatPercent(displaySummary.profitLossRate)}
-            isPositive={displaySummary.profitLoss >= 0}
+            isPositive={toFiniteNumber(displaySummary.profitLoss) >= 0}
           />
           <SummaryCard
             title="보유 종목 수"

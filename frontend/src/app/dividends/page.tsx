@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   getDividendSummary,
@@ -9,6 +10,7 @@ import {
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import MonthlyDividendChart from "@/components/dashboard/MonthlyDividendChart";
 import AuthGate from "@/components/auth/AuthGate";
+import { formatCurrency, formatPercent } from "@/lib/format";
 
 export default function DividendsPage() {
   const { data: summary } = useQuery({
@@ -17,9 +19,11 @@ export default function DividendsPage() {
     retry: false,
   });
 
+  const [selectedYear, setSelectedYear] = useState(2025);
+
   const { data: monthly } = useQuery({
-    queryKey: ["dividend-monthly"],
-    queryFn: () => getMonthlyDividends(),
+    queryKey: ["dividend-monthly", selectedYear],
+    queryFn: () => getMonthlyDividends(selectedYear),
     retry: false,
   });
 
@@ -28,19 +32,6 @@ export default function DividendsPage() {
     queryFn: getSecurityDividends,
     retry: false,
   });
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("ko-KR", {
-      style: "currency",
-      currency: "KRW",
-      maximumFractionDigits: 0,
-    }).format(value);
-
-  const formatPercent = (value: number) =>
-    new Intl.NumberFormat("ko-KR", {
-      style: "percent",
-      minimumFractionDigits: 2,
-    }).format(value);
 
   const displaySummary = summary || {
     expectedAnnualDividend: 0,
@@ -63,7 +54,18 @@ export default function DividendsPage() {
         </div>
       )}
       <div className="mx-auto max-w-7xl">
-        <h1 className="mb-8 text-3xl font-bold text-gray-900">배당 대시보드</h1>
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-gray-900">배당 대시보드</h1>
+          <select
+            value={selectedYear}
+            onChange={(event) => setSelectedYear(Number(event.target.value))}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
+          >
+            {[2024, 2025, 2026].map((year) => (
+              <option key={year} value={year}>{year}년</option>
+            ))}
+          </select>
+        </div>
 
         {/* Summary Cards */}
         <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">

@@ -44,6 +44,13 @@ public class TradeTransactionService {
 				.toList();
 	}
 
+	public List<TradeTransactionResponse> findByAccount(Long userId, Long accountId) {
+		accountService.getAccountForUser(userId, accountId);
+		return transactionRepository.findByUserIdAndAccountIdOrderByTradeDateAscIdAsc(userId, accountId).stream()
+				.map(TradeTransactionResponse::from)
+				.toList();
+	}
+
 	public TradeTransactionResponse findById(Long userId, Long tradeId) {
 		return TradeTransactionResponse.from(getTradeTransactionForUser(userId, tradeId));
 	}

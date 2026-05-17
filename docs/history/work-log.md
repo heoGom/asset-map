@@ -131,3 +131,13 @@
 - 공통 `application.properties`에서 환경별 설정을 분리하고 기본 profile을 `local`로 지정
 - `application-local.properties`, `application-dev.properties`, `application-prod.properties`로 DB, H2 console, seed, logging, JWT secret 설정을 분리
 - 운영 profile은 DB 접속 정보와 JWT secret을 환경변수에서 주입받도록 정리
+
+## 2026-05-17
+
+### 자산/배당 대시보드 데이터 흐름 안정화
+
+- Git 제외 대상인 `data.local.sql`에 구조 검증용 local minimal seed를 정리했다.
+- 자산/배당 API 응답 필드와 frontend mapping을 맞춰 NaN 표시를 방지하고, 수익률은 backend percent 값 기준으로 표시하도록 통일했다.
+- 자산 스냅샷 기본 조회 범위를 보정해 local seed 기준 자산 성장 타임라인이 표시되도록 했다.
+- 월별 배당금 현황은 지급일 기준 PAID 배당금 집계 값을 사용하고, 2025/2026년 local seed 데이터로 검증했다.
+- `/accounts/{accountId}` 상세 페이지와 계좌별 보유 종목, 거래내역, 배당내역 조회 API를 추가했다.

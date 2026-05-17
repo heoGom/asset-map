@@ -2,6 +2,12 @@ package com.assetmap.backend.account;
 
 import com.assetmap.backend.auth.SecurityUtil;
 import com.assetmap.backend.common.response.ApiResponse;
+import com.assetmap.backend.dividend.DividendPaymentResponse;
+import com.assetmap.backend.dividend.DividendPaymentService;
+import com.assetmap.backend.holding.HoldingResponse;
+import com.assetmap.backend.holding.HoldingService;
+import com.assetmap.backend.transaction.TradeTransactionResponse;
+import com.assetmap.backend.transaction.TradeTransactionService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,9 +24,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class AccountController {
 
 	private final AccountService accountService;
+	private final HoldingService holdingService;
+	private final TradeTransactionService transactionService;
+	private final DividendPaymentService paymentService;
 
-	public AccountController(AccountService accountService) {
+	public AccountController(
+			AccountService accountService,
+			HoldingService holdingService,
+			TradeTransactionService transactionService,
+			DividendPaymentService paymentService
+	) {
 		this.accountService = accountService;
+		this.holdingService = holdingService;
+		this.transactionService = transactionService;
+		this.paymentService = paymentService;
 	}
 
 	@PostMapping
@@ -36,6 +53,21 @@ public class AccountController {
 	@GetMapping("/{accountId}")
 	public ApiResponse<AccountResponse> findById(@PathVariable Long accountId) {
 		return ApiResponse.success(accountService.findById(SecurityUtil.getCurrentUserId(), accountId));
+	}
+
+	@GetMapping("/{accountId}/holdings")
+	public ApiResponse<List<HoldingResponse>> holdings(@PathVariable Long accountId) {
+		return ApiResponse.success(holdingService.findByAccount(SecurityUtil.getCurrentUserId(), accountId));
+	}
+
+	@GetMapping("/{accountId}/trades")
+	public ApiResponse<List<TradeTransactionResponse>> trades(@PathVariable Long accountId) {
+		return ApiResponse.success(transactionService.findByAccount(SecurityUtil.getCurrentUserId(), accountId));
+	}
+
+	@GetMapping("/{accountId}/dividend-payments")
+	public ApiResponse<List<DividendPaymentResponse>> dividendPayments(@PathVariable Long accountId) {
+		return ApiResponse.success(paymentService.findByAccount(SecurityUtil.getCurrentUserId(), accountId));
 	}
 
 	@PatchMapping("/{accountId}")

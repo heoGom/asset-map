@@ -9,6 +9,8 @@ public interface TradeTransactionRepository extends JpaRepository<TradeTransacti
 
 	List<TradeTransaction> findByUserIdOrderByTradeDateAscIdAsc(Long userId);
 
+	List<TradeTransaction> findByUserIdAndAccountIdOrderByTradeDateAscIdAsc(Long userId, Long accountId);
+
 	Optional<TradeTransaction> findByIdAndUserId(Long id, Long userId);
 
 	List<TradeTransaction> findByUserIdAndAccountIdAndSecurityItemIdOrderByTradeDateAscIdAsc(Long userId, Long accountId, Long securityItemId);

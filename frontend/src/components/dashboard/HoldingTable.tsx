@@ -1,23 +1,11 @@
 import { HoldingResponse } from "@/lib/api/holdings";
+import { formatCurrency, formatPercent, toFiniteNumber } from "@/lib/format";
 
 interface HoldingTableProps {
   holdings: HoldingResponse[];
 }
 
 export default function HoldingTable({ holdings }: HoldingTableProps) {
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("ko-KR", {
-      style: "currency",
-      currency: "KRW",
-      maximumFractionDigits: 0,
-    }).format(value);
-
-  const formatPercent = (value: number) =>
-    new Intl.NumberFormat("ko-KR", {
-      style: "percent",
-      minimumFractionDigits: 2,
-    }).format(value);
-
   if (holdings.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
@@ -82,14 +70,14 @@ export default function HoldingTable({ holdings }: HoldingTableProps) {
                 </td>
                 <td
                   className={`whitespace-nowrap px-6 py-4 text-sm font-semibold ${
-                    holding.profitLoss >= 0 ? "text-emerald-600" : "text-rose-600"
+                    toFiniteNumber(holding.profitLoss) >= 0 ? "text-emerald-600" : "text-rose-600"
                   }`}
                 >
                   {formatCurrency(holding.profitLoss)}
                 </td>
                 <td
                   className={`whitespace-nowrap px-6 py-4 text-sm font-semibold ${
-                    holding.profitLossRate >= 0 ? "text-emerald-600" : "text-rose-600"
+                    toFiniteNumber(holding.profitLossRate) >= 0 ? "text-emerald-600" : "text-rose-600"
                   }`}
                 >
                   {formatPercent(holding.profitLossRate)}

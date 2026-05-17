@@ -55,6 +55,13 @@ public class DividendPaymentService {
 		return paymentRepository.findByUserId(userId).stream().map(DividendPaymentResponse::from).toList();
 	}
 
+	public List<DividendPaymentResponse> findByAccount(Long userId, Long accountId) {
+		accountService.getAccountForUser(userId, accountId);
+		return paymentRepository.findByUserIdAndAccountIdOrderByPaymentDateAscIdAsc(userId, accountId).stream()
+				.map(DividendPaymentResponse::from)
+				.toList();
+	}
+
 	@Transactional
 	public DividendPaymentGenerateResponse generate(DividendPaymentGenerateRequest request) {
 		DividendEvent event = dividendEventService.getDividendEvent(request.dividendEventId());
