@@ -3,12 +3,7 @@ package com.assetmap.backend.dividend.importer.service;
 import com.assetmap.backend.common.exception.BusinessException;
 import com.assetmap.backend.common.exception.ErrorCode;
 import com.assetmap.backend.dividend.DataSourceType;
-import com.assetmap.backend.dividend.DividendEvent;
 import com.assetmap.backend.dividend.DividendEventRepository;
-import com.assetmap.backend.dividend.DividendEventType;
-import com.assetmap.backend.dividend.DividendPaymentGenerateRequest;
-import com.assetmap.backend.dividend.DividendPaymentGenerateResponse;
-import com.assetmap.backend.dividend.DividendPaymentService;
 import com.assetmap.backend.dividend.importer.dto.DividendImportRequest;
 import com.assetmap.backend.dividend.importer.dto.DividendImportResult;
 import com.assetmap.backend.dividend.importer.dto.DividendImportSkipReason;
@@ -16,6 +11,7 @@ import com.assetmap.backend.dividend.importer.dto.DividendSecurityImportResult;
 import com.assetmap.backend.dividend.importer.dto.DividendSkipSummary;
 import com.assetmap.backend.dividend.importer.dto.ImportedDividendEvent;
 import com.assetmap.backend.dividend.importer.dto.StockDividendFetchResult;
+import com.assetmap.backend.dividend.importer.service.DividendEventImportOperationService.ImportedDividendOperationResult;
 import com.assetmap.backend.dividend.importer.provider.StockDividendProvider;
 import com.assetmap.backend.holding.HoldingRepository;
 import com.assetmap.backend.securityitem.SecurityItem;
@@ -52,7 +48,7 @@ public class DividendEventImportService {
 	private final TradeTransactionRepository tradeTransactionRepository;
 	private final SecurityItemService securityItemService;
 	private final DividendEventRepository dividendEventRepository;
-	private final DividendPaymentService dividendPaymentService;
+	private final DividendEventImportOperationService importOperationService;
 	private final int defaultFromYear;
 
 	public DividendEventImportService(
@@ -62,7 +58,7 @@ public class DividendEventImportService {
 			TradeTransactionRepository tradeTransactionRepository,
 			SecurityItemService securityItemService,
 			DividendEventRepository dividendEventRepository,
-			DividendPaymentService dividendPaymentService,
+			DividendEventImportOperationService importOperationService,
 			@Value("${external.public-data.stock-dividend.default-from-year:2020}") int defaultFromYear
 	) {
 		this.stockDividendProvider = stockDividendProvider;
@@ -71,7 +67,7 @@ public class DividendEventImportService {
 		this.tradeTransactionRepository = tradeTransactionRepository;
 		this.securityItemService = securityItemService;
 		this.dividendEventRepository = dividendEventRepository;
-		this.dividendPaymentService = dividendPaymentService;
+		this.importOperationService = importOperationService;
 		this.defaultFromYear = defaultFromYear;
 	}
 
@@ -189,37 +185,16 @@ public class DividendEventImportService {
 				continue;
 			}
 
-			DividendEvent saved;
 			try {
-				saved = dividendEventRepository.save(new DividendEvent(
-						securityItem,
-						importedEvent.recordDate().getYear(),
-						null,
-						null,
-						importedEvent.recordDate(),
-						importedEvent.paymentDate(),
-						DividendEventType.CASH_DIVIDEND,
-						importedEvent.dividendPerShare(),
-						"KRW",
-						DataSourceType.PUBLIC_DATA_STOCK_DIVIDEND
-				));
+				ImportedDividendOperationResult operationResult = importOperationService.saveEventAndGeneratePayments(userId, securityItem, importedEvent);
 				accumulator.importedCount++;
-			} catch (RuntimeException exception) {
-				accumulator.skip(DividendImportSkipReason.SAVE_FAILED);
-				log.warn("Stock dividend import item save failed. securityId={} name={} recordDate={} dividendPerShare={} error={}",
-						securityItem.getId(), securityItem.getName(), importedEvent.recordDate(), importedEvent.dividendPerShare(), exception.toString());
-				continue;
-			}
-
-			try {
-				DividendPaymentGenerateResponse generated = dividendPaymentService.generate(new DividendPaymentGenerateRequest(userId, saved.getId()));
-				accumulator.generatedPaymentCount += generated.generatedCount();
+				accumulator.generatedPaymentCount += operationResult.generatedPaymentCount();
 				log.info("Stock dividend import item saved and payment generated. securityId={} name={} eventId={} recordDate={} paymentDate={} dividendPerShare={} generatedCount={}",
-						securityItem.getId(), securityItem.getName(), saved.getId(), saved.getRecordDate(), saved.getPaymentDate(), saved.getDividendPerShare(), generated.generatedCount());
-			} catch (RuntimeException exception) {
-				accumulator.skip(DividendImportSkipReason.PAYMENT_GENERATION_FAILED);
-				log.warn("Stock dividend payment generation failed. securityId={} name={} eventId={} error={}",
-						securityItem.getId(), securityItem.getName(), saved.getId(), exception.toString());
+						securityItem.getId(), securityItem.getName(), operationResult.eventId(), importedEvent.recordDate(), importedEvent.paymentDate(), importedEvent.dividendPerShare(), operationResult.generatedPaymentCount());
+			} catch (DividendEventImportOperationException exception) {
+				accumulator.skip(exception.getReason());
+				log.warn("Stock dividend import operation failed. securityId={} name={} reason={} recordDate={} dividendPerShare={} error={}",
+						securityItem.getId(), securityItem.getName(), exception.getReason(), importedEvent.recordDate(), importedEvent.dividendPerShare(), exception.getCause().toString());
 			}
 		}
 

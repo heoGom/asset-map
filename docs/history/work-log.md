@@ -170,3 +170,4 @@
 - 현재 사용자 Holding/TradeTransaction에 등장한 국내 `STOCK` 종목만 대상으로 2020년 이후 배당 이벤트를 import한다.
 - `DividendEvent` 저장 후 기존 생성 서비스를 재사용해 `DividendPayment`를 자동 생성한다.
 - ETF 분배금은 이번 자동 import 대상에서 제외하고 수동 입력 대상으로 유지한다.
+- `DividendEvent` 저장/`DividendPayment` 생성을 별도 트랜잭션으로 분리해 개별 이벤트 저장 실패가 전체 import 세션을 오염시키지 않도록 보강했다.
