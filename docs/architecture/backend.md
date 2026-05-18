@@ -14,7 +14,7 @@ Spring Boot 기반의 Asset Map 백엔드는 거래내역을 원천 데이터로
 | **Framework** | Spring Boot 3.5.6 | 최신 안정 버전 기반 |
 | **Language** | Java 17 | 레코드 및 최신 문법 활용 |
 | **Build Tool** | Gradle | 의존성 및 빌드 관리 |
-| **Database** | H2 | Local/Test용 인메모리 DB |
+| **Database** | MySQL 8.0, H2 | Local은 Docker MySQL, Test는 H2 |
 | **ORM** | Spring Data JPA | 도메인 모델 영속화 |
 | **Utilities** | Lombok, Validation | 코드 생산성 및 데이터 검증 |
 
@@ -106,24 +106,42 @@ com.assetmap.backend
 
 ### 로컬 실행
 ```bash
+docker compose up -d
 cd backend
 ./gradlew bootRun
 ```
 - API Base: `http://localhost:8080`
-- H2 Console: `http://localhost:8080/h2-console/` (local JDBC URL: `jdbc:h2:mem:assetmap-local`)
+- Local DB: `jdbc:mysql://localhost:33308/asset_map?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true`
 
 ### Profile 구성
 - `application.properties`: 공통 설정만 관리하며 기본 profile은 `local`입니다.
-- `application-local.properties`: 로컬 단일 개발용 H2, H2 console, optional local seed 로딩을 사용합니다.
+- `application-local.properties`: Docker MySQL을 사용합니다. `ddl-auto=update`, SQL init 비활성화, Docker volume 기반 데이터 유지를 기본으로 합니다.
+- `application-test.properties`: 테스트 전용 H2 인메모리 DB를 사용합니다. `ddl-auto=create-drop`, SQL init 비활성화를 유지합니다.
 - `application-dev.properties`: 공유 개발 환경용이며 DB/JPA 설정을 환경변수로 override할 수 있습니다.
 - `application-prod.properties`: 운영 환경용이며 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`을 환경변수로 주입해야 합니다. H2 console과 SQL seed는 비활성화합니다.
 
 ### 로컬 Seed 데이터
-- 공통 설정은 SQL seed를 로드하지 않습니다.
-- `local` profile은 Git에서 제외된 `data.local.sql`/`seed.local.sql`만 optional로 로드합니다.
-- 로컬 개발 데이터는 `backend/src/main/resources/db/data.example.sql`을 `data.local.sql`로 복사해 작성합니다.
-- `data.local.sql`, `seed.local.sql`, `*.local.csv`, `*.local.json`, `backend/src/main/resources/seed/local/**`는 Git 추적 대상에서 제외합니다.
-- 로컬 seed를 사용할 때만 `SPRING_PROFILES_ACTIVE=local ./gradlew bootRun`으로 실행합니다.
+- 공통 설정과 local profile은 SQL seed를 자동 로드하지 않습니다.
+- Docker MySQL은 volume을 사용하므로 서버 재시작 후에도 데이터가 유지됩니다.
+- 최초 개발 편의용 synthetic minimal seed는 `backend/src/main/resources/db/local/seed-minimal.sql`에 두고, backend를 한 번 실행해 테이블을 만든 뒤 명시적으로만 적용합니다.
+- 실제 투자 full seed, API key, 민감정보가 들어간 파일은 Git 추적 대상이 아닙니다.
+- 화면은 데이터가 없을 때 mock fallback이 아니라 empty state를 보여주는 정책을 유지합니다.
+
+### Local DB 운영 스크립트
+```bash
+./scripts/reset-local-db.sh
+./scripts/backup-local-db.sh before-work
+./scripts/restore-local-db.sh backups/asset_map_before-work_YYYYMMDD-HHMMSS.sql
+docker compose down
+docker compose down -v
+```
+- `reset-local-db.sh`: Docker volume을 삭제하고 깨끗한 MySQL을 다시 실행합니다. seed는 자동 적용하지 않습니다.
+- `backup-local-db.sh`: 현재 `asset_map` DB를 `backups/` 아래 SQL dump로 저장합니다.
+- `restore-local-db.sh`: 지정한 SQL dump 파일로 `asset_map` DB를 drop/create 후 복원합니다.
+- Minimal seed가 필요하면 backend를 한 번 실행해 JPA가 테이블을 만든 뒤 다음처럼 명시 적용합니다.
+```bash
+docker exec -i asset-map-mysql mysql -uassetmap -passetmap asset_map < backend/src/main/resources/db/local/seed-minimal.sql
+```
 
 ### 테스트 수행
 ```bash

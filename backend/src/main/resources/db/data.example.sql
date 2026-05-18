@@ -1,5 +1,6 @@
 -- Example seed template only.
--- Copy this file to data.local.sql for local development.
+-- Local profile does not run SQL seed automatically.
+-- Prefer backend/src/main/resources/db/local/seed-minimal.sql for synthetic local samples.
 -- Do not put real account names, holdings, quantities, purchase prices, or balances in committed files.
 
 -- Optional account examples

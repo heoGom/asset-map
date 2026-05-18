@@ -1,0 +1,21 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: asset-map-mysql
+    ports:
+      - "33308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: asset_map
+      MYSQL_USER: assetmap
+      MYSQL_PASSWORD: assetmap
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+09:00
+    volumes:
+      - asset-map-mysql-data:/var/lib/mysql
+
+volumes:
+  asset-map-mysql-data:

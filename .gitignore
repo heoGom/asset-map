@@ -9,15 +9,21 @@ frontend/.next/
 # Environment
 .env
 .env.*
+.local-secrets.properties
+application-local-secret.yml
 
 # Local seed data
 backend/src/main/resources/db/data.local.sql
 backend/src/main/resources/db/seed.local.sql
+backend/src/main/resources/db/*full*.sql
 backend/src/main/resources/seed/local/**
 frontend/src/lib/mock/local/**
 frontend/src/lib/mock/*.local.ts
 *.local.csv
 *.local.json
+
+# Local database backups
+backups/*.sql
 
 # IDE
 .idea/

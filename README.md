@@ -19,7 +19,7 @@ Spring Boot와 Next.js로 구현한 자산 및 배당 정보 시각화 풀스택
 | Area | Stack |
 | --- | --- |
 | Backend | Java 17, Spring Boot 3, Spring Data JPA, Gradle |
-| Database | H2 (Local/Test) |
+| Database | MySQL 8.0 (Local via Docker), H2 (Test) |
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
 | Visualization | Recharts |
 | Data Fetching | TanStack React Query |
@@ -98,6 +98,19 @@ asset-map/
 
 ### Backend Local
 
+Local profile은 Docker MySQL을 사용합니다. 먼저 로컬 DB를 실행하세요.
+
+```bash
+docker compose up -d
+```
+
+접속 정보:
+
+- JDBC URL: `jdbc:mysql://localhost:33308/asset_map?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true`
+- Database: `asset_map`
+- User/Password: `assetmap` / `assetmap`
+- Root password: `root`
+
 ```bash
 cd backend
 ./gradlew bootRun
@@ -115,20 +128,31 @@ SPRING_PROFILES_ACTIVE=prod DB_URL=... DB_USERNAME=... DB_PASSWORD=... JWT_SECRE
 
 ### Local Seed Data
 
-Git에 실제 투자 데이터나 로컬 seed 파일을 커밋하지 않습니다. 예시 템플릿만 참고하세요.
+Local MySQL은 Docker volume을 사용하므로 서버 재시작 후에도 데이터가 유지됩니다. 자동 seed는 꺼져 있으며, 데이터가 없으면 화면은 mock fallback이 아니라 empty state를 보여야 합니다.
 
 ```bash
-cp backend/src/main/resources/db/data.example.sql backend/src/main/resources/db/data.local.sql
+./scripts/reset-local-db.sh
 ```
 
-`data.local.sql`에 로컬 개발용 데이터만 작성한 뒤 local profile로 실행합니다.
+필요하면 backend를 한 번 실행해 JPA가 테이블을 만든 뒤 synthetic minimal seed만 명시적으로 적용합니다. 실제 투자 full seed나 민감 데이터는 커밋하지 않습니다.
+
+```bash
+docker exec -i asset-map-mysql mysql -uassetmap -passetmap asset_map < backend/src/main/resources/db/local/seed-minimal.sql
+```
+
+```bash
+./scripts/backup-local-db.sh before-work
+./scripts/restore-local-db.sh backups/asset_map_before-work_YYYYMMDD-HHMMSS.sql
+```
+
+완전 초기화는 `docker compose down -v` 또는 `./scripts/reset-local-db.sh`를 사용합니다. `backups/*.sql`, `data.local.sql`, `seed.local.sql`, `*.local.csv`, `*.local.json`, `backend/src/main/resources/seed/local/**`는 `.gitignore`로 제외됩니다.
+
+Test profile은 H2를 유지합니다.
 
 ```bash
 cd backend
-SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
+./gradlew test
 ```
-
-커밋 가능한 파일은 `data.example.sql`, `seed.example.json` 같은 템플릿뿐입니다. `data.local.sql`, `seed.local.sql`, `*.local.csv`, `*.local.json`, `backend/src/main/resources/seed/local/**`는 `.gitignore`로 제외됩니다.
 
 ### Frontend Local
 
