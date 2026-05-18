@@ -66,6 +66,15 @@ public class MarketPrice extends BaseEntity {
 		this.fetchedAt = fetchedAt == null ? LocalDateTime.now() : fetchedAt;
 	}
 
+	public void update(BigDecimal closePrice, BigDecimal currentPrice, BigDecimal changeAmount, BigDecimal changeRate, Long volume, LocalDateTime fetchedAt) {
+		this.closePrice = closePrice;
+		this.currentPrice = currentPrice;
+		this.changeAmount = changeAmount;
+		this.changeRate = changeRate;
+		this.volume = volume;
+		this.fetchedAt = fetchedAt == null ? LocalDateTime.now() : fetchedAt;
+	}
+
 	public Long getId() { return id; }
 	public SecurityItem getSecurityItem() { return securityItem; }
 	public LocalDate getPriceDate() { return priceDate; }

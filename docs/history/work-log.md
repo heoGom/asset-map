@@ -178,3 +178,11 @@
 - local SQL 자동 seed를 끄고, synthetic minimal seed는 명시 실행용 `db/local/seed-minimal.sql`로 분리했다.
 - DB 초기화/백업/복원 스크립트를 `scripts/`에 추가하고 `backups/*.sql`은 Git 제외 대상으로 관리한다.
 - 실제 투자 full seed와 mock fallback은 사용하지 않고, 데이터가 없으면 empty state를 보여주는 정책을 문서화했다.
+
+### KRX 승인 대기용 데이터 동기화 기반 구조 추가
+
+- `DataSyncStatus` 기반으로 syncType/source/targetKey별 실행 상태와 마지막 성공 일자를 관리하는 구조를 추가했다.
+- KRX 종목 마스터/시세 Provider 인터페이스와 Stub 구현을 준비했으며, Stub은 빈 리스트만 반환하고 실제 외부 API를 호출하지 않는다.
+- `SecurityItem`은 ticker 기준 upsert 구조를 준비했고, 종목 마스터는 KRX 승인 후 전체 수집 대상으로 연결할 예정이다.
+- `MarketPrice`는 ticker 매칭 후 `securityItemId + priceDate + source` 기준 upsert 구조를 준비했고, 시세 저장 대상은 보유/거래/관심 종목 중심으로 제한할 예정이다.
+- 관리자용 `/api/admin/sync/status`, `/api/admin/sync/security-master`, `/api/admin/sync/market-prices` 기본 endpoint를 추가했다.

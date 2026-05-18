@@ -86,6 +86,11 @@ com.assetmap.backend
 - `GET /api/market-prices/latest/security/{securityItemId}`: 종목 최신 가격 조회
 - `POST /api/market-prices/refresh`: 실제 외부 연동 전 Stub provider 기반 갱신
 
+### 5. Admin Sync
+- `GET /api/admin/sync/status`: syncType/source/targetKey별 동기화 상태 조회
+- `POST /api/admin/sync/security-master`: KRX 종목 마스터 동기화 골격. 현재 Stub이며 외부 API를 호출하지 않습니다.
+- `POST /api/admin/sync/market-prices`: KRX 시세 동기화 골격. 현재 Stub이며 외부 API를 호출하지 않습니다.
+
 ## 구현 상세
 
 ### 데이터 감사 (Audit)
@@ -101,6 +106,12 @@ com.assetmap.backend
 - 부동 소수점 오차 방지를 위해 금액 계산 시 `BigDecimal` 사용을 원칙으로 합니다.
 - `TradeTransaction` 등록 시 `Holding`을 자동 생성/갱신합니다.
 - 배당 지급 예정 생성은 `DividendEvent.recordDate` 기준 보유수량을 거래내역에서 계산합니다.
+
+### 데이터 동기화 구조
+- `DataSyncStatus`는 `syncType`, `source`, `targetKey` 조합으로 동기화 실행 상태와 마지막 성공 일자를 저장합니다.
+- KRX 승인 전까지 `SecurityMasterProvider`, `MarketPriceProvider`는 Stub 구현만 사용하며 실제 HTTP 호출과 API key 설정은 없습니다.
+- 종목 마스터는 KRX 승인 후 전체 수집 대상으로 보고 `ticker` 기준으로 `SecurityItem`을 upsert합니다. `isinCode` 등 추가 식별자는 DB 컬럼 확장 검토 TODO입니다.
+- 시세는 외부 원천이 전체 시장 단위로 내려오더라도 저장은 현재 DB에 존재하는 종목, 향후 보유/거래/관심 종목 기준으로 제한합니다.
 
 ## 실행 및 검증 (Run & Verify)
 
