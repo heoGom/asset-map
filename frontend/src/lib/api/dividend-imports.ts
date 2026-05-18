@@ -6,12 +6,35 @@ export interface DividendImportRequest {
   toYear?: number;
 }
 
+export interface DividendSkipSummary {
+  reason: string;
+  count: number;
+}
+
+export interface DividendSecurityImportResult {
+  securityItemId: number;
+  securityName: string;
+  searchTerms: string[];
+  httpStatus?: number;
+  resultCode?: string;
+  resultMsg?: string;
+  totalCount: number;
+  itemCount: number;
+  importedCount: number;
+  skippedCount: number;
+  generatedPaymentCount: number;
+  status: string;
+  message: string;
+  skipReasons: DividendSkipSummary[];
+}
+
 export interface DividendImportResult {
   targetSecurityCount: number;
   importedEventCount: number;
   skippedEventCount: number;
   generatedPaymentCount: number;
   failedSecurityCount: number;
+  securities: DividendSecurityImportResult[];
 }
 
 export const importMyStockDividends = (request: DividendImportRequest) =>

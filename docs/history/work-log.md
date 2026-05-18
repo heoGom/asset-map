@@ -162,3 +162,11 @@
 - 현재 사용자 보유/거래 내역에 등장한 국내 `STOCK` 종목만 대상으로 2020년 이후 배당기준일 데이터를 import한다.
 - import된 데이터는 `DividendEvent`로 저장하고 기존 `DividendPayment` 생성 서비스를 재사용해 계좌별 내 배당금을 자동 생성한다.
 - ETF 분배금은 자동 import 대상에서 제외하고 기존 수동 입력 흐름을 유지한다.
+
+### 금융위원회 주식배당정보 import 보강
+
+- serviceKey 설정값이 Encoding/Decoding 어느 형태든 정상 호출되도록 normalize 처리했다.
+- 우선주 검색어 후보(`삼성전자우` → `삼성전자`, `현대차3우B` → `현대자동차`)와 보통주/우선주 매칭을 보강했다.
+- 현재 사용자 Holding/TradeTransaction에 등장한 국내 `STOCK` 종목만 대상으로 2020년 이후 배당 이벤트를 import한다.
+- `DividendEvent` 저장 후 기존 생성 서비스를 재사용해 `DividendPayment`를 자동 생성한다.
+- ETF 분배금은 이번 자동 import 대상에서 제외하고 수동 입력 대상으로 유지한다.

@@ -263,9 +263,36 @@ export default function DividendsPage() {
               </div>
             </div>
             {importResult && (
-              <div className="rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-                대상 {importResult.targetSecurityCount}개, 저장 {importResult.importedEventCount}건, 건너뜀 {importResult.skippedEventCount}건,
-                내 배당금 생성 {importResult.generatedPaymentCount}건, 실패 종목 {importResult.failedSecurityCount}개
+              <div className="space-y-3 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                <p>
+                  대상 {importResult.targetSecurityCount}개, 저장 {importResult.importedEventCount}건, 건너뜀 {importResult.skippedEventCount}건,
+                  내 배당금 생성 {importResult.generatedPaymentCount}건, 실패 종목 {importResult.failedSecurityCount}개
+                </p>
+                {importResult.securities.length > 0 && (
+                  <div className="max-h-56 overflow-auto rounded-lg border border-emerald-200 bg-white/60 dark:border-emerald-800 dark:bg-gray-900/50">
+                    <table className="min-w-full divide-y divide-emerald-100 dark:divide-emerald-900">
+                      <thead>
+                        <tr>
+                          {["종목", "검색어", "상태", "저장", "건너뜀", "생성"].map((header) => (
+                            <th key={header} className="px-3 py-2 text-left text-xs font-semibold">{header}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-emerald-100 dark:divide-emerald-900">
+                        {importResult.securities.map((item) => (
+                          <tr key={item.securityItemId}>
+                            <td className="whitespace-nowrap px-3 py-2">{item.securityName}</td>
+                            <td className="px-3 py-2">{item.searchTerms.join(", ")}</td>
+                            <td className="whitespace-nowrap px-3 py-2">{item.status}</td>
+                            <td className="px-3 py-2">{item.importedCount}</td>
+                            <td className="px-3 py-2">{item.skippedCount}</td>
+                            <td className="px-3 py-2">{item.generatedPaymentCount}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
             {importMutation.isError && (

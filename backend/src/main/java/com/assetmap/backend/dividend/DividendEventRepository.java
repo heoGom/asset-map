@@ -12,4 +12,6 @@ public interface DividendEventRepository extends JpaRepository<DividendEvent, Lo
 	List<DividendEvent> findBySecurityItemIdAndDividendYear(Long securityItemId, Integer dividendYear);
 
 	boolean existsBySecurityItemIdAndRecordDateAndPaymentDateAndDividendPerShareAndSource(Long securityItemId, LocalDate recordDate, LocalDate paymentDate, BigDecimal dividendPerShare, DataSourceType source);
+
+	boolean existsBySecurityItemIdAndRecordDateAndDividendPerShareAndSource(Long securityItemId, LocalDate recordDate, BigDecimal dividendPerShare, DataSourceType source);
 }

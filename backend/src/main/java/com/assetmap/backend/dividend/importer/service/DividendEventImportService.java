@@ -11,7 +11,11 @@ import com.assetmap.backend.dividend.DividendPaymentGenerateResponse;
 import com.assetmap.backend.dividend.DividendPaymentService;
 import com.assetmap.backend.dividend.importer.dto.DividendImportRequest;
 import com.assetmap.backend.dividend.importer.dto.DividendImportResult;
+import com.assetmap.backend.dividend.importer.dto.DividendImportSkipReason;
+import com.assetmap.backend.dividend.importer.dto.DividendSecurityImportResult;
+import com.assetmap.backend.dividend.importer.dto.DividendSkipSummary;
 import com.assetmap.backend.dividend.importer.dto.ImportedDividendEvent;
+import com.assetmap.backend.dividend.importer.dto.StockDividendFetchResult;
 import com.assetmap.backend.dividend.importer.provider.StockDividendProvider;
 import com.assetmap.backend.holding.HoldingRepository;
 import com.assetmap.backend.securityitem.SecurityItem;
@@ -20,10 +24,16 @@ import com.assetmap.backend.securityitem.SecurityType;
 import com.assetmap.backend.transaction.TradeTransactionRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +43,11 @@ import org.springframework.util.StringUtils;
 @Transactional(readOnly = true)
 public class DividendEventImportService {
 
+	private static final Logger log = LoggerFactory.getLogger(DividendEventImportService.class);
+	private static final Pattern PREFERRED_SUFFIX = Pattern.compile("(.+?)([2-9]?우B?|우선주?)$");
+
 	private final StockDividendProvider stockDividendProvider;
+	private final DividendSearchTermResolver searchTermResolver;
 	private final HoldingRepository holdingRepository;
 	private final TradeTransactionRepository tradeTransactionRepository;
 	private final SecurityItemService securityItemService;
@@ -43,6 +57,7 @@ public class DividendEventImportService {
 
 	public DividendEventImportService(
 			StockDividendProvider stockDividendProvider,
+			DividendSearchTermResolver searchTermResolver,
 			HoldingRepository holdingRepository,
 			TradeTransactionRepository tradeTransactionRepository,
 			SecurityItemService securityItemService,
@@ -51,6 +66,7 @@ public class DividendEventImportService {
 			@Value("${external.public-data.stock-dividend.default-from-year:2020}") int defaultFromYear
 	) {
 		this.stockDividendProvider = stockDividendProvider;
+		this.searchTermResolver = searchTermResolver;
 		this.holdingRepository = holdingRepository;
 		this.tradeTransactionRepository = tradeTransactionRepository;
 		this.securityItemService = securityItemService;
@@ -68,6 +84,8 @@ public class DividendEventImportService {
 		Map<Long, SecurityItem> targetSecurities = new LinkedHashMap<>();
 		holdingRepository.findDistinctSecurityItemsByUserId(userId).forEach(security -> addTarget(targetSecurities, security));
 		tradeTransactionRepository.findDistinctSecurityItemsByUserId(userId).forEach(security -> addTarget(targetSecurities, security));
+		log.info("Stock dividend import targets resolved. userId={} fromYear={} toYear={} targetSecurityCount={}",
+				userId, fromYear, toYear, targetSecurities.size());
 
 		DividendImportResult total = DividendImportResult.empty();
 		for (SecurityItem securityItem : targetSecurities.values()) {
@@ -89,60 +107,128 @@ public class DividendEventImportService {
 	}
 
 	private DividendImportResult importSecurity(Long userId, SecurityItem securityItem, int fromYear, int toYear, boolean countFilteredTarget) {
+		List<String> searchTerms = searchTermResolver.resolve(securityItem);
 		if (!isImportTarget(securityItem)) {
-			return countFilteredTarget ? new DividendImportResult(0, 0, 1, 0, 0) : DividendImportResult.empty();
+			log.info("Stock dividend import skipped target. securityId={} name={} type={} currency={} country={} reason=WRONG_STOCK_TYPE",
+					securityItem.getId(), securityItem.getName(), securityItem.getSecurityType(), securityItem.getCurrency(), securityItem.getCountry());
+			DividendSecurityImportResult securityResult = securityResult(
+					securityItem,
+					searchTerms,
+					null,
+					"",
+					"",
+					0,
+					0,
+					0,
+					countFilteredTarget ? 1 : 0,
+					0,
+					"SKIPPED",
+					"STOCK/KRW 국내 종목만 import 대상입니다.",
+					skipCounts(DividendImportSkipReason.WRONG_STOCK_TYPE)
+			);
+			return result(countFilteredTarget ? 0 : 0, 0, countFilteredTarget ? 1 : 0, 0, 0, securityResult);
 		}
 
-		List<ImportedDividendEvent> importedEvents;
-		try {
-			importedEvents = stockDividendProvider.fetch(securityItem);
-		} catch (BusinessException exception) {
-			if (exception.getErrorCode() == ErrorCode.COMMON_001) {
-				throw exception;
+		log.info("Stock dividend import started. userId={} securityId={} name={} ticker={} fromYear={} toYear={} searchTerms={}",
+				userId, securityItem.getId(), securityItem.getName(), securityItem.getTicker(), fromYear, toYear, searchTerms);
+
+		List<StockDividendFetchResult> fetchResults = new ArrayList<>();
+		for (String searchTerm : searchTerms) {
+			try {
+				fetchResults.add(stockDividendProvider.fetch(searchTerm));
+			} catch (BusinessException exception) {
+				if (exception.getErrorCode() == ErrorCode.CONFIG_ERROR || exception.getErrorCode() == ErrorCode.API_AUTH_ERROR) {
+					throw exception;
+				}
+				log.warn("Stock dividend import failed at provider stage. securityId={} name={} searchTerm={} errorCode={} message={}",
+						securityItem.getId(), securityItem.getName(), searchTerm, exception.getErrorCode(), exception.getMessage());
+				DividendSecurityImportResult securityResult = securityResult(
+						securityItem,
+						searchTerms,
+						null,
+						"",
+						"",
+						0,
+						0,
+						0,
+						0,
+						0,
+						"FAILED",
+						exception.getErrorCode().name(),
+						Map.of()
+				);
+				return result(1, 0, 0, 0, 1, securityResult);
 			}
-			return new DividendImportResult(1, 0, 0, 0, 1);
 		}
 
-		int importedEventCount = 0;
-		int skippedEventCount = 0;
-		int generatedPaymentCount = 0;
+		ImportAccumulator accumulator = new ImportAccumulator(fetchResults);
 		LocalDate fromDate = LocalDate.of(fromYear, 1, 1);
 		LocalDate toDate = LocalDate.of(toYear, 12, 31);
+		List<ImportedDividendEvent> importedEvents = fetchResults.stream().flatMap(result -> result.items().stream()).toList();
+
+		if (importedEvents.isEmpty()) {
+			accumulator.skip(DividendImportSkipReason.NO_DATA);
+			return result(1, 0, accumulator.skippedCount, 0, 0, accumulator.toSecurityResult(securityItem, searchTerms, "SKIPPED", "조회된 배당 데이터가 없습니다."));
+		}
 
 		for (ImportedDividendEvent importedEvent : importedEvents) {
-			if (!shouldSave(securityItem, importedEvent, fromDate, toDate)) {
-				skippedEventCount++;
+			DividendImportSkipReason skipReason = skipReason(securityItem, importedEvent, fromDate, toDate);
+			if (skipReason != null) {
+				accumulator.skip(skipReason);
+				logSkip(securityItem, importedEvent, skipReason);
 				continue;
 			}
-			if (dividendEventRepository.existsBySecurityItemIdAndRecordDateAndPaymentDateAndDividendPerShareAndSource(
+			if (dividendEventRepository.existsBySecurityItemIdAndRecordDateAndDividendPerShareAndSource(
 					securityItem.getId(),
 					importedEvent.recordDate(),
-					importedEvent.paymentDate(),
 					importedEvent.dividendPerShare(),
 					DataSourceType.PUBLIC_DATA_STOCK_DIVIDEND
 			)) {
-				skippedEventCount++;
+				accumulator.skip(DividendImportSkipReason.DUPLICATE_EVENT);
+				logSkip(securityItem, importedEvent, DividendImportSkipReason.DUPLICATE_EVENT);
 				continue;
 			}
 
-			DividendEvent saved = dividendEventRepository.save(new DividendEvent(
-					securityItem,
-					importedEvent.recordDate().getYear(),
-					null,
-					null,
-					importedEvent.recordDate(),
-					importedEvent.paymentDate(),
-					DividendEventType.CASH_DIVIDEND,
-					importedEvent.dividendPerShare(),
-					"KRW",
-					DataSourceType.PUBLIC_DATA_STOCK_DIVIDEND
-			));
-			DividendPaymentGenerateResponse generated = dividendPaymentService.generate(new DividendPaymentGenerateRequest(userId, saved.getId()));
-			importedEventCount++;
-			generatedPaymentCount += generated.generatedCount();
+			DividendEvent saved;
+			try {
+				saved = dividendEventRepository.save(new DividendEvent(
+						securityItem,
+						importedEvent.recordDate().getYear(),
+						null,
+						null,
+						importedEvent.recordDate(),
+						importedEvent.paymentDate(),
+						DividendEventType.CASH_DIVIDEND,
+						importedEvent.dividendPerShare(),
+						"KRW",
+						DataSourceType.PUBLIC_DATA_STOCK_DIVIDEND
+				));
+				accumulator.importedCount++;
+			} catch (RuntimeException exception) {
+				accumulator.skip(DividendImportSkipReason.SAVE_FAILED);
+				log.warn("Stock dividend import item save failed. securityId={} name={} recordDate={} dividendPerShare={} error={}",
+						securityItem.getId(), securityItem.getName(), importedEvent.recordDate(), importedEvent.dividendPerShare(), exception.toString());
+				continue;
+			}
+
+			try {
+				DividendPaymentGenerateResponse generated = dividendPaymentService.generate(new DividendPaymentGenerateRequest(userId, saved.getId()));
+				accumulator.generatedPaymentCount += generated.generatedCount();
+				log.info("Stock dividend import item saved and payment generated. securityId={} name={} eventId={} recordDate={} paymentDate={} dividendPerShare={} generatedCount={}",
+						securityItem.getId(), securityItem.getName(), saved.getId(), saved.getRecordDate(), saved.getPaymentDate(), saved.getDividendPerShare(), generated.generatedCount());
+			} catch (RuntimeException exception) {
+				accumulator.skip(DividendImportSkipReason.PAYMENT_GENERATION_FAILED);
+				log.warn("Stock dividend payment generation failed. securityId={} name={} eventId={} error={}",
+						securityItem.getId(), securityItem.getName(), saved.getId(), exception.toString());
+			}
 		}
 
-		return new DividendImportResult(1, importedEventCount, skippedEventCount, generatedPaymentCount, 0);
+		String status = accumulator.importedCount > 0 ? "SUCCESS" : "SKIPPED";
+		String message = accumulator.importedCount > 0 ? "배당 이벤트를 저장하고 내 배당금을 생성했습니다." : "저장된 배당 이벤트가 없습니다.";
+		log.info("Stock dividend import finished. securityId={} name={} importedEventCount={} skippedEventCount={} generatedPaymentCount={}",
+				securityItem.getId(), securityItem.getName(), accumulator.importedCount, accumulator.skippedCount, accumulator.generatedPaymentCount);
+		return result(1, accumulator.importedCount, accumulator.skippedCount, accumulator.generatedPaymentCount, 0,
+				accumulator.toSecurityResult(securityItem, searchTerms, status, message));
 	}
 
 	private void addTarget(Map<Long, SecurityItem> targetSecurities, SecurityItem securityItem) {
@@ -151,34 +237,102 @@ public class DividendEventImportService {
 		}
 	}
 
-	private boolean shouldSave(SecurityItem securityItem, ImportedDividendEvent event, LocalDate fromDate, LocalDate toDate) {
-		if (event.recordDate() == null || event.recordDate().isBefore(fromDate) || event.recordDate().isAfter(toDate)) {
-			return false;
+	private DividendImportSkipReason skipReason(SecurityItem securityItem, ImportedDividendEvent event, LocalDate fromDate, LocalDate toDate) {
+		if (event.recordDate() == null) {
+			return DividendImportSkipReason.NO_RECORD_DATE;
 		}
-		if (event.dividendPerShare() == null || event.dividendPerShare().compareTo(BigDecimal.ZERO) <= 0) {
-			return false;
+		if (event.recordDate().isBefore(fromDate) || event.recordDate().isAfter(toDate)) {
+			return DividendImportSkipReason.BEFORE_FROM_YEAR;
 		}
 		if (StringUtils.hasText(event.dividendRecordName()) && normalize(event.dividendRecordName()).contains("무배당")) {
-			return false;
+			return DividendImportSkipReason.ZERO_DIVIDEND;
 		}
-		return matchesSecurity(securityItem, event);
+		if (event.dividendPerShare() == null || event.dividendPerShare().compareTo(BigDecimal.ZERO) <= 0) {
+			return DividendImportSkipReason.ZERO_DIVIDEND;
+		}
+		return matchDecision(securityItem, event).skipReason();
 	}
 
-	private boolean matchesSecurity(SecurityItem securityItem, ImportedDividendEvent event) {
-		String securityName = normalize(securityItem.getName());
-		String isinName = normalize(event.isinName());
-		String companyName = normalize(event.companyName());
-		String stockTypeName = normalize(event.stockTypeName());
-		boolean preferredSecurity = securityName.endsWith("우") || securityName.contains("우선");
-		boolean preferredEvent = stockTypeName.contains("우선") || isinName.contains("우선");
+	private MatchDecision matchDecision(SecurityItem securityItem, ImportedDividendEvent event) {
+		StockClass securityClass = stockClassFromSecurityName(securityItem.getName());
+		StockClass eventClass = stockClassFromEvent(event);
+		if (eventClass.kind() == StockKind.UNKNOWN) {
+			return MatchDecision.skip(DividendImportSkipReason.AMBIGUOUS_MATCH);
+		}
+		if (securityClass.kind() == StockKind.COMMON && eventClass.kind() != StockKind.COMMON) {
+			return MatchDecision.skip(DividendImportSkipReason.WRONG_STOCK_TYPE);
+		}
+		if (securityClass.kind() == StockKind.PREFERRED) {
+			if (eventClass.kind() == StockKind.COMMON) {
+				return MatchDecision.skip(DividendImportSkipReason.WRONG_STOCK_TYPE);
+			}
+			if (securityClass.rank() > 1 && eventClass.rank() == 1) {
+				return MatchDecision.skip(DividendImportSkipReason.AMBIGUOUS_MATCH);
+			}
+			if (securityClass.rank() != eventClass.rank()) {
+				return MatchDecision.skip(DividendImportSkipReason.WRONG_STOCK_TYPE);
+			}
+		}
+		return companyMatches(securityItem, event) ? MatchDecision.match() : MatchDecision.skip(DividendImportSkipReason.MATCH_FAILED);
+	}
 
-		if (preferredSecurity) {
-			return preferredEvent && (containsNonBlank(isinName, securityName) || containsNonBlank(securityName, companyName));
+	private boolean companyMatches(SecurityItem securityItem, ImportedDividendEvent event) {
+		String expectedCompany = normalize(expectedCompanyName(securityItem));
+		String companyName = normalize(event.companyName());
+		String isinName = normalize(event.isinName());
+		return containsNonBlank(companyName, expectedCompany)
+				|| containsNonBlank(isinName, expectedCompany)
+				|| containsNonBlank(expectedCompany, companyName);
+	}
+
+	private String expectedCompanyName(SecurityItem securityItem) {
+		String name = securityItem.getName();
+		String preferredBase = searchTermResolver.preferredBaseName(name);
+		if (StringUtils.hasText(preferredBase)) {
+			return mapCompanyName(preferredBase);
 		}
-		if (preferredEvent) {
-			return false;
+		return mapCompanyName(name);
+	}
+
+	private String mapCompanyName(String name) {
+		return switch (name) {
+			case "현대차", "현대차우", "현대차2우B", "현대차3우B" -> "현대자동차";
+			default -> name;
+		};
+	}
+
+	private StockClass stockClassFromSecurityName(String securityName) {
+		String normalized = normalize(securityName);
+		Matcher matcher = PREFERRED_SUFFIX.matcher(normalized);
+		if (!matcher.matches()) {
+			return new StockClass(StockKind.COMMON, 0);
 		}
-		return containsNonBlank(isinName, securityName) || containsNonBlank(companyName, securityName) || containsNonBlank(securityName, companyName);
+		return new StockClass(StockKind.PREFERRED, preferredRank(matcher.group(2)));
+	}
+
+	private StockClass stockClassFromEvent(ImportedDividendEvent event) {
+		String stockTypeName = normalize(event.stockTypeName());
+		String isinName = normalize(event.isinName());
+		if (stockTypeName.contains("보통주")) {
+			return new StockClass(StockKind.COMMON, 0);
+		}
+		if (stockTypeName.contains("우선주")) {
+			return new StockClass(StockKind.PREFERRED, preferredRank(stockTypeName));
+		}
+		if (isinName.matches(".*[1-9]우.*") || isinName.contains("우선")) {
+			return new StockClass(StockKind.PREFERRED, preferredRank(isinName));
+		}
+		return new StockClass(StockKind.UNKNOWN, 0);
+	}
+
+	private int preferredRank(String value) {
+		String normalized = normalize(value);
+		for (int rank = 2; rank <= 9; rank++) {
+			if (normalized.contains(rank + "우")) {
+				return rank;
+			}
+		}
+		return 1;
 	}
 
 	private boolean containsNonBlank(String target, String candidate) {
@@ -222,6 +376,141 @@ public class DividendEventImportService {
 	private void validateYearRange(int fromYear, int toYear) {
 		if (fromYear > toYear) {
 			throw new BusinessException(ErrorCode.VALIDATION_001);
+		}
+	}
+
+	private DividendImportResult result(
+			int targetSecurityCount,
+			int importedEventCount,
+			int skippedEventCount,
+			int generatedPaymentCount,
+			int failedSecurityCount,
+			DividendSecurityImportResult securityResult
+	) {
+		return new DividendImportResult(targetSecurityCount, importedEventCount, skippedEventCount, generatedPaymentCount, failedSecurityCount, List.of(securityResult));
+	}
+
+	private DividendSecurityImportResult securityResult(
+			SecurityItem securityItem,
+			List<String> searchTerms,
+			Integer httpStatus,
+			String resultCode,
+			String resultMsg,
+			int totalCount,
+			int itemCount,
+			int importedCount,
+			int skippedCount,
+			int generatedPaymentCount,
+			String status,
+			String message,
+			Map<DividendImportSkipReason, Integer> skipCounts
+	) {
+		return new DividendSecurityImportResult(
+				securityItem.getId(),
+				securityItem.getName(),
+				searchTerms,
+				httpStatus,
+				resultCode,
+				resultMsg,
+				totalCount,
+				itemCount,
+				importedCount,
+				skippedCount,
+				generatedPaymentCount,
+				status,
+				message,
+				toSkipSummaries(skipCounts)
+		);
+	}
+
+	private List<DividendSkipSummary> toSkipSummaries(Map<DividendImportSkipReason, Integer> skipCounts) {
+		return skipCounts.entrySet().stream()
+				.map(entry -> new DividendSkipSummary(entry.getKey(), entry.getValue()))
+				.toList();
+	}
+
+	private Map<DividendImportSkipReason, Integer> skipCounts(DividendImportSkipReason reason) {
+		Map<DividendImportSkipReason, Integer> counts = new EnumMap<>(DividendImportSkipReason.class);
+		counts.put(reason, 1);
+		return counts;
+	}
+
+	private void logSkip(SecurityItem securityItem, ImportedDividendEvent importedEvent, DividendImportSkipReason skipReason) {
+		log.info("Stock dividend import item skipped. securityId={} name={} reason={} searchTerm={} recordDate={} paymentDate={} dividendPerShare={} companyName={} isinName={} stockType={} dividendRecord={}",
+				securityItem.getId(),
+				securityItem.getName(),
+				skipReason,
+				importedEvent.searchTerm(),
+				importedEvent.recordDate(),
+				importedEvent.paymentDate(),
+				importedEvent.dividendPerShare(),
+				importedEvent.companyName(),
+				importedEvent.isinName(),
+				importedEvent.stockTypeName(),
+				importedEvent.dividendRecordName());
+	}
+
+	private enum StockKind {
+		COMMON,
+		PREFERRED,
+		UNKNOWN
+	}
+
+	private record StockClass(StockKind kind, int rank) {
+	}
+
+	private record MatchDecision(boolean matched, DividendImportSkipReason skipReason) {
+
+		private static MatchDecision match() {
+			return new MatchDecision(true, null);
+		}
+
+		private static MatchDecision skip(DividendImportSkipReason reason) {
+			return new MatchDecision(false, reason);
+		}
+	}
+
+	private class ImportAccumulator {
+
+		private final int httpStatus;
+		private final String resultCode;
+		private final String resultMsg;
+		private final int totalCount;
+		private final int itemCount;
+		private final Map<DividendImportSkipReason, Integer> skipCounts = new EnumMap<>(DividendImportSkipReason.class);
+		private int importedCount;
+		private int skippedCount;
+		private int generatedPaymentCount;
+
+		private ImportAccumulator(List<StockDividendFetchResult> fetchResults) {
+			this.httpStatus = fetchResults.stream().mapToInt(StockDividendFetchResult::httpStatus).filter(status -> status > 0).reduce((first, second) -> second).orElse(0);
+			this.resultCode = fetchResults.stream().map(StockDividendFetchResult::resultCode).filter(StringUtils::hasText).reduce((first, second) -> second).orElse("");
+			this.resultMsg = fetchResults.stream().map(StockDividendFetchResult::resultMsg).filter(StringUtils::hasText).reduce((first, second) -> second).orElse("");
+			this.totalCount = fetchResults.stream().mapToInt(StockDividendFetchResult::totalCount).sum();
+			this.itemCount = fetchResults.stream().mapToInt(StockDividendFetchResult::itemCount).sum();
+		}
+
+		private void skip(DividendImportSkipReason reason) {
+			skippedCount++;
+			skipCounts.merge(reason, 1, Integer::sum);
+		}
+
+		private DividendSecurityImportResult toSecurityResult(SecurityItem securityItem, List<String> searchTerms, String status, String message) {
+			return securityResult(
+					securityItem,
+					searchTerms,
+					httpStatus == 0 ? null : httpStatus,
+					resultCode,
+					resultMsg,
+					totalCount,
+					itemCount,
+					importedCount,
+					skippedCount,
+					generatedPaymentCount,
+					status,
+					message,
+					skipCounts
+			);
 		}
 	}
 }

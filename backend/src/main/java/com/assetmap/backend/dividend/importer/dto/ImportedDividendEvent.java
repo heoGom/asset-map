@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record ImportedDividendEvent(
+		String searchTerm,
 		String isinCode,
 		String isinName,
 		String companyName,

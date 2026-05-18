@@ -1,0 +1,15 @@
+package com.assetmap.backend.dividend.importer.dto;
+
+public enum DividendImportSkipReason {
+	NO_DATA,
+	BEFORE_FROM_YEAR,
+	ZERO_DIVIDEND,
+	NO_RECORD_DATE,
+	NO_PAYMENT_DATE,
+	MATCH_FAILED,
+	AMBIGUOUS_MATCH,
+	WRONG_STOCK_TYPE,
+	DUPLICATE_EVENT,
+	SAVE_FAILED,
+	PAYMENT_GENERATION_FAILED
+}
