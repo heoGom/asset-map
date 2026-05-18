@@ -174,7 +174,7 @@
 
 ### Local Docker MySQL 개발 DB 정리
 
-- local profile을 Docker MySQL(`localhost:33308/asset_map`) 기준으로 정리하고 test profile은 H2를 유지하도록 분리했다.
+- local profile을 Docker MySQL(`localhost:23306/asset_map`) 기준으로 정리하고 test profile은 H2를 유지하도록 분리했다.
 - local SQL 자동 seed를 끄고, synthetic minimal seed는 명시 실행용 `db/local/seed-minimal.sql`로 분리했다.
 - DB 초기화/백업/복원 스크립트를 `scripts/`에 추가하고 `backups/*.sql`은 Git 제외 대상으로 관리한다.
 - 실제 투자 full seed와 mock fallback은 사용하지 않고, 데이터가 없으면 empty state를 보여주는 정책을 문서화했다.

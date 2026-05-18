@@ -106,7 +106,7 @@ docker compose up -d
 
 접속 정보:
 
-- JDBC URL: `jdbc:mysql://localhost:33308/asset_map?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true`
+- JDBC URL: `jdbc:mysql://localhost:23306/asset_map?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true`
 - Database: `asset_map`
 - User/Password: `assetmap` / `assetmap`
 - Root password: `root`

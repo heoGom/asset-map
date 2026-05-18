@@ -21,5 +21,5 @@ done
 
 docker exec asset-map-mysql mysqladmin ping -u"${DB_USER}" -p"${DB_PASSWORD}" --silent >/dev/null
 
-echo "Local MySQL is ready on localhost:33308."
+echo "Local MySQL is ready on localhost:23306."
 echo "Seed is not applied automatically. Start the backend once to create tables, then apply backend/src/main/resources/db/local/seed-minimal.sql manually if needed."

@@ -111,7 +111,7 @@ cd backend
 ./gradlew bootRun
 ```
 - API Base: `http://localhost:8080`
-- Local DB: `jdbc:mysql://localhost:33308/asset_map?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true`
+- Local DB: `jdbc:mysql://localhost:23306/asset_map?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true`
 
 ### Profile 구성
 - `application.properties`: 공통 설정만 관리하며 기본 profile은 `local`입니다.

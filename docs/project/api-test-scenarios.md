@@ -7,7 +7,7 @@ Asset Map 백엔드의 핵심 API를 수동으로 점검할 때 사용하는 시
 ## 공통 준비
 
 - backend 실행: `cd backend && SPRING_PROFILES_ACTIVE=local ./gradlew bootRun`
-- Local DB: Docker MySQL `localhost:33308/asset_map`
+- Local DB: Docker MySQL `localhost:23306/asset_map`
 - 공통 응답 형식: `ApiResponse<T>`
 
 ## 검증 순서
