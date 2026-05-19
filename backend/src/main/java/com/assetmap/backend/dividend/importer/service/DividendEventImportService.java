@@ -13,7 +13,6 @@ import com.assetmap.backend.dividend.importer.dto.ImportedDividendEvent;
 import com.assetmap.backend.dividend.importer.dto.StockDividendFetchResult;
 import com.assetmap.backend.dividend.importer.service.DividendEventImportOperationService.ImportedDividendOperationResult;
 import com.assetmap.backend.dividend.importer.provider.StockDividendProvider;
-import com.assetmap.backend.holding.HoldingRepository;
 import com.assetmap.backend.securityitem.SecurityItem;
 import com.assetmap.backend.securityitem.SecurityItemService;
 import com.assetmap.backend.securityitem.SecurityType;
@@ -44,7 +43,6 @@ public class DividendEventImportService {
 
 	private final StockDividendProvider stockDividendProvider;
 	private final DividendSearchTermResolver searchTermResolver;
-	private final HoldingRepository holdingRepository;
 	private final TradeTransactionRepository tradeTransactionRepository;
 	private final SecurityItemService securityItemService;
 	private final DividendEventRepository dividendEventRepository;
@@ -54,7 +52,6 @@ public class DividendEventImportService {
 	public DividendEventImportService(
 			StockDividendProvider stockDividendProvider,
 			DividendSearchTermResolver searchTermResolver,
-			HoldingRepository holdingRepository,
 			TradeTransactionRepository tradeTransactionRepository,
 			SecurityItemService securityItemService,
 			DividendEventRepository dividendEventRepository,
@@ -63,7 +60,6 @@ public class DividendEventImportService {
 	) {
 		this.stockDividendProvider = stockDividendProvider;
 		this.searchTermResolver = searchTermResolver;
-		this.holdingRepository = holdingRepository;
 		this.tradeTransactionRepository = tradeTransactionRepository;
 		this.securityItemService = securityItemService;
 		this.dividendEventRepository = dividendEventRepository;
@@ -78,14 +74,35 @@ public class DividendEventImportService {
 		validateYearRange(fromYear, toYear);
 
 		Map<Long, SecurityItem> targetSecurities = new LinkedHashMap<>();
-		holdingRepository.findDistinctSecurityItemsByUserId(userId).forEach(security -> addTarget(targetSecurities, security));
-		tradeTransactionRepository.findDistinctSecurityItemsByUserId(userId).forEach(security -> addTarget(targetSecurities, security));
+		tradeTransactionRepository.findDistinctSecurityItemsByUserIdAndSecurityTypes(userId, List.of(SecurityType.STOCK))
+				.forEach(security -> addTarget(targetSecurities, security));
 		log.info("Stock dividend import targets resolved. userId={} fromYear={} toYear={} targetSecurityCount={}",
 				userId, fromYear, toYear, targetSecurities.size());
 
 		DividendImportResult total = DividendImportResult.empty();
 		for (SecurityItem securityItem : targetSecurities.values()) {
-			total = total.plus(importSecurity(userId, securityItem, fromYear, toYear, false));
+			total = total.plus(importSecurity(List.of(userId), securityItem, fromYear, toYear, false));
+		}
+		return total;
+	}
+
+	@Transactional
+	public DividendImportResult importTradedStockSecurities(DividendImportRequest request) {
+		int fromYear = resolveFromYear(request);
+		int toYear = resolveToYear(request);
+		validateYearRange(fromYear, toYear);
+
+		List<SecurityItem> targetSecurities = tradeTransactionRepository.findDistinctSecurityItemsBySecurityTypes(List.of(SecurityType.STOCK))
+				.stream()
+				.filter(this::isImportTarget)
+				.toList();
+		log.info("Stock dividend import targets resolved for all traded securities. fromYear={} toYear={} targetSecurityCount={}",
+				fromYear, toYear, targetSecurities.size());
+
+		DividendImportResult total = DividendImportResult.empty();
+		for (SecurityItem securityItem : targetSecurities) {
+			List<Long> userIds = tradeTransactionRepository.findDistinctUserIdsBySecurityItemId(securityItem.getId());
+			total = total.plus(importSecurity(userIds, securityItem, fromYear, toYear, false));
 		}
 		return total;
 	}
@@ -99,10 +116,10 @@ public class DividendEventImportService {
 		int toYear = resolveToYear(request);
 		validateYearRange(fromYear, toYear);
 		SecurityItem securityItem = securityItemService.getSecurityItem(request.securityItemId());
-		return importSecurity(userId, securityItem, fromYear, toYear, true);
+		return importSecurity(List.of(userId), securityItem, fromYear, toYear, true);
 	}
 
-	private DividendImportResult importSecurity(Long userId, SecurityItem securityItem, int fromYear, int toYear, boolean countFilteredTarget) {
+	private DividendImportResult importSecurity(List<Long> userIds, SecurityItem securityItem, int fromYear, int toYear, boolean countFilteredTarget) {
 		List<String> searchTerms = searchTermResolver.resolve(securityItem);
 		if (!isImportTarget(securityItem)) {
 			log.info("Stock dividend import skipped target. securityId={} name={} type={} currency={} country={} reason=WRONG_STOCK_TYPE",
@@ -126,7 +143,7 @@ public class DividendEventImportService {
 		}
 
 		log.info("Stock dividend import started. userId={} securityId={} name={} ticker={} fromYear={} toYear={} searchTerms={}",
-				userId, securityItem.getId(), securityItem.getName(), securityItem.getTicker(), fromYear, toYear, searchTerms);
+				userIds, securityItem.getId(), securityItem.getName(), securityItem.getTicker(), fromYear, toYear, searchTerms);
 
 		List<StockDividendFetchResult> fetchResults = new ArrayList<>();
 		for (String searchTerm : searchTerms) {
@@ -174,19 +191,27 @@ public class DividendEventImportService {
 				logSkip(securityItem, importedEvent, skipReason);
 				continue;
 			}
-			if (dividendEventRepository.existsBySecurityItemIdAndRecordDateAndDividendPerShareAndSource(
+			var existingEvent = dividendEventRepository.findFirstBySecurityItemIdAndRecordDateAndDividendPerShareAndSource(
 					securityItem.getId(),
 					importedEvent.recordDate(),
 					importedEvent.dividendPerShare(),
 					DataSourceType.PUBLIC_DATA_STOCK_DIVIDEND
-			)) {
+			);
+			if (existingEvent.isPresent()) {
+				try {
+					ImportedDividendOperationResult operationResult = importOperationService.generatePayments(userIds, existingEvent.get().getId());
+					accumulator.generatedPaymentCount += operationResult.generatedPaymentCount();
+				} catch (DividendEventImportOperationException exception) {
+					log.warn("Stock dividend duplicate payment generation failed. securityId={} name={} reason={} recordDate={} dividendPerShare={} error={}",
+							securityItem.getId(), securityItem.getName(), exception.getReason(), importedEvent.recordDate(), importedEvent.dividendPerShare(), exception.getCause().toString());
+				}
 				accumulator.skip(DividendImportSkipReason.DUPLICATE_EVENT);
 				logSkip(securityItem, importedEvent, DividendImportSkipReason.DUPLICATE_EVENT);
 				continue;
 			}
 
 			try {
-				ImportedDividendOperationResult operationResult = importOperationService.saveEventAndGeneratePayments(userId, securityItem, importedEvent);
+				ImportedDividendOperationResult operationResult = importOperationService.saveEventAndGeneratePayments(userIds, securityItem, importedEvent);
 				accumulator.importedCount++;
 				accumulator.generatedPaymentCount += operationResult.generatedPaymentCount();
 				log.info("Stock dividend import item saved and payment generated. securityId={} name={} eventId={} recordDate={} paymentDate={} dividendPerShare={} generatedCount={}",

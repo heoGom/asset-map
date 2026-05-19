@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.assetmap.backend.account.Account;
 import com.assetmap.backend.account.AccountRepository;
 import com.assetmap.backend.account.AccountType;
+import com.assetmap.backend.datasync.provider.MarketPriceProvider;
 import com.assetmap.backend.datasync.provider.ImportedMarketPrice;
 import com.assetmap.backend.datasync.provider.ImportedSecurityMaster;
 import com.assetmap.backend.holding.Holding;
@@ -14,6 +15,10 @@ import com.assetmap.backend.marketprice.MarketPriceRepository;
 import com.assetmap.backend.securityitem.SecurityItem;
 import com.assetmap.backend.securityitem.SecurityItemRepository;
 import com.assetmap.backend.securityitem.SecurityType;
+import com.assetmap.backend.transaction.TradeTransaction;
+import com.assetmap.backend.transaction.TradeTransactionRepository;
+import com.assetmap.backend.transaction.TradeType;
+import com.assetmap.backend.transaction.TransactionSource;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -21,6 +26,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 class DataSyncInfrastructureTest {
@@ -29,6 +39,8 @@ class DataSyncInfrastructureTest {
 	private DataSyncStatusService dataSyncStatusService;
 	@Autowired
 	private DataSyncStatusRepository dataSyncStatusRepository;
+	@Autowired
+	private AdminSyncService adminSyncService;
 	@Autowired
 	private SecurityMasterSyncService securityMasterSyncService;
 	@Autowired
@@ -41,11 +53,16 @@ class DataSyncInfrastructureTest {
 	private HoldingRepository holdingRepository;
 	@Autowired
 	private AccountRepository accountRepository;
+	@Autowired
+	private TradeTransactionRepository tradeTransactionRepository;
+	@MockitoBean
+	private MarketPriceProvider marketPriceProvider;
 
 	@BeforeEach
 	void setUp() {
 		marketPriceRepository.deleteAll();
 		holdingRepository.deleteAll();
+		tradeTransactionRepository.deleteAll();
 		accountRepository.deleteAll();
 		securityItemRepository.deleteAll();
 		dataSyncStatusRepository.deleteAll();
@@ -96,6 +113,42 @@ class DataSyncInfrastructureTest {
 		assertThat(marketPriceRepository.findAll()).hasSize(1);
 		assertThat(marketPriceRepository.findAll().get(0).getCurrentPrice()).isEqualByComparingTo("71000");
 		assertThat(holdingRepository.findBySecurityItemId(securityItem.getId()).get(0).getCurrentPrice()).isEqualByComparingTo("71000");
+	}
+
+	@Test
+	void adminMarketPriceSyncTargetsTradedSecuritiesOnly() {
+		LocalDate priceDate = LocalDate.of(2026, 5, 15);
+		SecurityItem traded = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		SecurityItem holdingOnly = securityItemRepository.save(new SecurityItem("000660", "SK하이닉스", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		holdingRepository.save(new Holding(1L, account, traded, BigDecimal.ONE, BigDecimal.TEN, BigDecimal.TEN, "KRW"));
+		holdingRepository.save(new Holding(1L, account, holdingOnly, BigDecimal.ONE, BigDecimal.TEN, BigDecimal.TEN, "KRW"));
+		tradeTransactionRepository.save(new TradeTransaction(
+				1L,
+				account,
+				traded,
+				LocalDate.of(2026, 5, 10),
+				TradeType.BUY,
+				BigDecimal.ONE,
+				BigDecimal.TEN,
+				BigDecimal.ZERO,
+				BigDecimal.ZERO,
+				"KRW",
+				TransactionSource.MANUAL,
+				null
+		));
+		when(marketPriceProvider.fetchKospiPrices(eq(priceDate), eq(List.of("005930"))))
+				.thenReturn(List.of(price("005930", priceDate, "70000")));
+
+		AdminSyncResponse response = adminSyncService.syncMarketPrices(new AdminSyncRequest(true, priceDate, null, null, null));
+
+		assertThat(response.status()).isEqualTo("SUCCESS");
+		assertThat(marketPriceRepository.findAll()).hasSize(1);
+		assertThat(marketPriceRepository.findBySecurityItemIdOrderByPriceDateDesc(traded.getId())).hasSize(1);
+		assertThat(marketPriceRepository.findBySecurityItemIdOrderByPriceDateDesc(holdingOnly.getId())).isEmpty();
+		assertThat(holdingRepository.findBySecurityItemId(traded.getId()).get(0).getCurrentPrice()).isEqualByComparingTo("70000");
+		assertThat(holdingRepository.findBySecurityItemId(holdingOnly.getId()).get(0).getCurrentPrice()).isEqualByComparingTo("10");
+		verify(marketPriceProvider).fetchKospiPrices(eq(priceDate), eq(List.of("005930")));
 	}
 
 	private ImportedMarketPrice price(String ticker, LocalDate priceDate, String currentPrice) {

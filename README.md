@@ -85,6 +85,10 @@ asset-map/
 | `GET` | `/api/snapshots/timeline` | 자산 추이 타임라인 조회 |
 | `GET` | `/api/dividend/monthly` | 월별 배당 내역 조회 |
 | `GET` | `/api/dividend/growth` | 배당 성장률 분석 조회 |
+| `GET` | `/api/admin/sync/status` | 외부 데이터 동기화 상태 조회 |
+| `POST` | `/api/admin/sync/security-master` | KRX 종목마스터 강제/조건부 동기화 |
+| `POST` | `/api/admin/sync/market-prices` | 거래 종목 기준 KRX 시세 backfill |
+| `POST` | `/api/admin/sync/stock-dividends` | 거래 주식 기준 배당 이벤트 backfill |
 | `GET` | `/api/health` | 서버 상태 체크 |
 
 ## Getting Started
@@ -117,6 +121,7 @@ cd backend
 ```
 
 기본 profile은 `local`입니다. Backend runs at: `http://localhost:8080`
+`local` profile은 서버 시작 시 종목마스터, 시세, 배당 동기화 필요 여부를 확인하고, 정기 스케줄도 같은 정책을 사용합니다. 외부 API 키는 `backend/.local-secrets.properties` 또는 환경변수로만 주입하고 Git에 커밋하지 않습니다.
 
 Profile별 실행:
 
@@ -128,7 +133,7 @@ SPRING_PROFILES_ACTIVE=prod DB_URL=... DB_USERNAME=... DB_PASSWORD=... JWT_SECRE
 
 ### Local Seed Data
 
-Local MySQL은 Docker volume을 사용하므로 서버 재시작 후에도 데이터가 유지됩니다. 자동 seed는 꺼져 있으며, 데이터가 없으면 화면은 mock fallback이 아니라 empty state를 보여야 합니다.
+Local MySQL은 Docker volume을 사용하므로 서버 재시작 후에도 데이터가 유지됩니다. 자동 seed는 꺼져 있으며, 데이터가 없으면 화면은 mock fallback이 아니라 empty state를 보여야 합니다. 실제 KRX로 가져올 수 있는 STOCK 종목마스터는 seed에 넣지 않고, 거래 샘플은 실제 공개 ticker를 기준으로 KRX sync 이후 연결합니다.
 
 ```bash
 ./scripts/reset-local-db.sh

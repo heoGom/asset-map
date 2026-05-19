@@ -204,3 +204,15 @@
 - KRX 시세 저장 후 최신 기준일이면 기존 흐름으로 `Holding.currentPrice`를 갱신하고, HoldingSnapshot 자동 생성은 별도 정책 확정 전까지 TODO로 유지한다.
 - local minimal seed는 실제 KRX로 수집 가능한 STOCK 종목 마스터를 직접 넣지 않고, KRX sync 이후 실제 ticker 기준으로 거래/보유 샘플을 연결하도록 정리했다.
 - 시세는 내 종목만 저장, 배당은 내 STOCK 종목만 2020년 이후 수집, ETF 분배금은 수동 입력 유지 정책을 문서화했다.
+
+### 외부 데이터 startup/backfill/schedule 동기화 보강
+
+- `@EnableScheduling`과 `ExternalDataStartupSyncRunner`, `ExternalDataSyncScheduler`를 추가해 startup 확인과 정기 스케줄이 동일한 `AdminSyncService` 정책을 호출하도록 정리했다.
+- local profile은 `app.sync.enabled=true`와 세부 on-startup/cron 설정으로 종목마스터, 시세, 배당 동기화를 켜고, test profile은 `app.sync.enabled=false`로 외부 API 호출을 차단한다.
+- 수동 API는 `/api/admin/sync/security-master`, `/api/admin/sync/market-prices`, `/api/admin/sync/stock-dividends`로 유지하며 `force=true`, `basDd`/`priceDate`, `fromYear`/`toYear`를 통한 강제 재동기화 용도로 동작한다.
+- 시세 대상은 `Holding`이 아니라 `TradeTransaction`에 등장한 `STOCK`/`ETF` 기준으로 변경했다. KRX API가 전체 시장 데이터를 반환해도 저장은 거래내역 대상 ticker만 수행한다.
+- 시세 backfill은 기존 KRX `MarketPrice`의 최대 `priceDate` 다음 날부터 필요한 날짜만 시도하고, 데이터가 없으면 기본 30일/최대 60일 제한 안에서 보강한다.
+- 배당 대상은 `TradeTransaction`에 등장한 국내 `STOCK` 기준으로 변경했다. 최초 또는 이벤트가 없을 때는 2020년부터, 이후에는 최근 2개 연도를 재확인하며 ETF 분배금은 수동 입력으로 유지한다.
+- 배당 이벤트 중복 발견 시에도 거래 사용자별 `DividendPayment` 생성을 재시도해 기존 이벤트에 대해 누락된 payment가 보강되도록 했다.
+- 날짜별 시세 상태는 `TRADED_SECURITIES_YYYYMMDD`, 전체 시세 상태는 `TRADED_SECURITIES`, 배당 상태는 `TRADED_STOCK_SECURITIES`로 `DataSyncStatus`에 기록한다.
+- local seed는 실제 KRX STOCK master를 포함하지 않고, 실제 공개 ticker를 참조하는 최소 사용자/계좌/거래 샘플 정책을 유지한다.

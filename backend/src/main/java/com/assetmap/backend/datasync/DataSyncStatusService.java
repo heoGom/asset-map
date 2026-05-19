@@ -71,6 +71,12 @@ public class DataSyncStatusService {
 				.orElse(false);
 	}
 
+	public LocalDate lastSuccessDate(DataSyncType syncType, DataSyncSource source, String targetKey) {
+		return repository.findBySyncTypeAndSourceAndTargetKey(syncType, source, targetKey)
+				.map(DataSyncStatus::getLastSuccessDate)
+				.orElse(null);
+	}
+
 	private DataSyncStatus getOrCreate(DataSyncType syncType, DataSyncSource source, String targetKey) {
 		return repository.findBySyncTypeAndSourceAndTargetKey(syncType, source, targetKey)
 				.orElseGet(() -> repository.save(new DataSyncStatus(syncType, source, targetKey)));

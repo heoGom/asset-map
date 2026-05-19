@@ -5,7 +5,9 @@ import java.time.LocalDate;
 public record AdminSyncRequest(
 		Boolean force,
 		LocalDate priceDate,
-		LocalDate basDd
+		LocalDate basDd,
+		Integer fromYear,
+		Integer toYear
 ) {
 
 	public boolean forceOrFalse() {
