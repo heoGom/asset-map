@@ -61,8 +61,14 @@ public class DataSyncStatusService {
 			return true;
 		}
 		return repository.findBySyncTypeAndSourceAndTargetKey(syncType, source, targetKey)
-				.map(status -> status.getStatus() != DataSyncStatusValue.SUCCESS || !LocalDate.now().equals(status.getLastSuccessDate()))
+				.map(status -> !LocalDate.now().equals(status.getLastSuccessDate()))
 				.orElse(true);
+	}
+
+	public boolean hasSuccessfulSync(DataSyncType syncType, DataSyncSource source, String targetKey) {
+		return repository.findBySyncTypeAndSourceAndTargetKey(syncType, source, targetKey)
+				.map(status -> status.getLastSuccessDate() != null)
+				.orElse(false);
 	}
 
 	private DataSyncStatus getOrCreate(DataSyncType syncType, DataSyncSource source, String targetKey) {

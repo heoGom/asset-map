@@ -88,8 +88,8 @@ com.assetmap.backend
 
 ### 5. Admin Sync
 - `GET /api/admin/sync/status`: syncType/source/targetKey별 동기화 상태 조회
-- `POST /api/admin/sync/security-master`: KRX 유가증권/코스닥 종목기본정보를 호출해 전체 종목 마스터를 `SecurityItem`에 ticker 기준 upsert
-- `POST /api/admin/sync/market-prices`: KRX 시세 동기화 골격. 현재 Stub이며 외부 API를 호출하지 않습니다.
+- `POST /api/admin/sync/security-master`: KRX 유가증권/코스닥 종목기본정보를 호출해 전체 종목 마스터를 `SecurityItem`에 ticker 기준 upsert. `force=false`면 당일 성공 기록이 있을 때 skip하고, DB 종목 마스터가 비어 있으면 실행합니다.
+- `POST /api/admin/sync/market-prices`: KRX 유가증권/코스닥/ETF 일별매매정보를 호출하되, 현재 사용자 Holding 또는 TradeTransaction에 등장한 종목만 `MarketPrice`에 저장합니다.
 
 ## 구현 상세
 
@@ -109,9 +109,13 @@ com.assetmap.backend
 
 ### 데이터 동기화 구조
 - `DataSyncStatus`는 `syncType`, `source`, `targetKey` 조합으로 동기화 실행 상태와 마지막 성공 일자를 저장합니다.
+- `DataSyncPolicyService`는 `force`, `DataSyncStatus`, 로컬 DB 보유 여부를 함께 보고 실행/skip을 판단합니다.
 - KRX 종목 마스터는 `KRX_API_KEY` 환경변수를 `AUTH_KEY` header로 전달하고, `{"basDd":"YYYYMMDD"}` JSON body로 유가증권/코스닥 종목기본정보를 호출합니다.
 - 종목 마스터는 전체 수집 대상으로 보고 `ticker` 기준으로 `SecurityItem`을 upsert합니다. KRX `ISU_CD`는 `isinCode`에 저장합니다.
-- 시세는 외부 원천이 전체 시장 단위로 내려오더라도 저장은 현재 DB에 존재하는 종목, 향후 보유/거래/관심 종목 기준으로 제한합니다.
+- local profile에서는 `app.sync.security-master-on-startup=true`일 때 서버 시작 후 종목 마스터 동기화를 조건부 확인합니다. 외부 API 실패나 키 누락은 부팅 실패로 전파하지 않고 `DataSyncStatus`에 실패를 남깁니다. test profile에서는 자동 외부 동기화가 꺼져 있습니다.
+- KRX 시세는 `basDd` 기준 전체 시장 응답을 받더라도 저장 대상은 현재 사용자 Holding/TradeTransaction 종목으로 제한합니다. 중복 기준은 `securityItemId + priceDate + source`이며, 최신 가격이면 `Holding.currentPrice`를 갱신합니다.
+- KRX 시세 `targetKey`는 `YYYYMMDD`를 사용합니다. 같은 기준일이 이미 성공했으면 `force=false`에서 skip하고, `force=true`면 재동기화합니다.
+- 배당 API는 전체 상장 종목이 아니라 현재 사용자 Holding/TradeTransaction에 등장한 국내 `STOCK` 종목만 2020년 이후 가져옵니다. ETF 분배금은 자동 API 대상이 아니며 수동 입력을 유지합니다.
 
 ## 실행 및 검증 (Run & Verify)
 
@@ -135,7 +139,8 @@ cd backend
 ### 로컬 Seed 데이터
 - 공통 설정과 local profile은 SQL seed를 자동 로드하지 않습니다.
 - Docker MySQL은 volume을 사용하므로 서버 재시작 후에도 데이터가 유지됩니다.
-- 최초 개발 편의용 synthetic minimal seed는 `backend/src/main/resources/db/local/seed-minimal.sql`에 두고, backend를 한 번 실행해 테이블을 만든 뒤 명시적으로만 적용합니다.
+- 최초 개발 편의용 synthetic minimal seed는 `backend/src/main/resources/db/local/seed-minimal.sql`에 두고, backend를 한 번 실행해 테이블과 KRX 종목 마스터를 만든 뒤 명시적으로만 적용합니다.
+- 실제 KRX로 수집 가능한 STOCK 종목 마스터는 local seed에 넣지 않습니다. local seed는 KRX sync 후 ticker 기준으로 `SecurityItem`을 참조하고, ETF master sync 전까지 필요한 최소 ETF 샘플만 실제 공개 ticker/name과 맞춰 유지합니다.
 - 실제 투자 full seed, API key, 민감정보가 들어간 파일은 Git 추적 대상이 아닙니다.
 - 화면은 데이터가 없을 때 mock fallback이 아니라 empty state를 보여주는 정책을 유지합니다.
 

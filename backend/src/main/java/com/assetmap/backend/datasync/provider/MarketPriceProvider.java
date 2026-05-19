@@ -5,9 +5,21 @@ import java.util.List;
 
 public interface MarketPriceProvider {
 
-	List<ImportedMarketPrice> fetchKospiPrices(LocalDate priceDate);
+	default List<ImportedMarketPrice> fetchKospiPrices(LocalDate priceDate) {
+		return fetchKospiPrices(priceDate, List.of());
+	}
 
-	List<ImportedMarketPrice> fetchKosdaqPrices(LocalDate priceDate);
+	default List<ImportedMarketPrice> fetchKosdaqPrices(LocalDate priceDate) {
+		return fetchKosdaqPrices(priceDate, List.of());
+	}
 
-	List<ImportedMarketPrice> fetchEtfPrices(LocalDate priceDate);
+	default List<ImportedMarketPrice> fetchEtfPrices(LocalDate priceDate) {
+		return fetchEtfPrices(priceDate, List.of());
+	}
+
+	List<ImportedMarketPrice> fetchKospiPrices(LocalDate priceDate, List<String> targetTickers);
+
+	List<ImportedMarketPrice> fetchKosdaqPrices(LocalDate priceDate, List<String> targetTickers);
+
+	List<ImportedMarketPrice> fetchEtfPrices(LocalDate priceDate, List<String> targetTickers);
 }

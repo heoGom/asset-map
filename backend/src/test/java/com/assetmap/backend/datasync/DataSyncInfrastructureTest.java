@@ -57,6 +57,7 @@ class DataSyncInfrastructureTest {
 
 		dataSyncStatusService.markRunning(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", "running");
 		dataSyncStatusService.markSuccess(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", LocalDate.now(), "done");
+		dataSyncStatusService.markSkipped(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", "already synced");
 
 		assertThat(dataSyncStatusService.shouldSyncToday(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", false)).isFalse();
 		assertThat(dataSyncStatusService.shouldSyncToday(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", true)).isTrue();

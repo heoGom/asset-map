@@ -195,3 +195,12 @@
 - `DataSyncStatus`는 `SECURITY_MASTER`/`KRX`/`ALL` 기준으로 실행 상태와 당일 성공 여부를 관리하고, `force=true`면 재실행한다.
 - 이번 단계에서는 KRX 시세, ETF 일별매매정보, `MarketPrice`, `Holding.currentPrice`, `HoldingSnapshot` 저장은 연결하지 않았다.
 - 시세 수집은 다음 단계에서 현재 보유/거래/관심 종목만 DB에 저장하고 화면은 DB만 조회하는 구조로 유지한다.
+
+### 데이터 동기화 정책과 KRX 시세 1차 구현 정리
+
+- `DataSyncPolicyService`를 추가해 `DataSyncStatus`, force 여부, 로컬 DB 보유 여부를 함께 보고 sync 실행/skip을 판단하게 했다.
+- local profile에서는 서버 시작 후 종목 마스터가 비어 있거나 당일 최신화가 필요할 때 KRX 종목 마스터 동기화를 조건부 실행하고, 실패해도 앱 부팅은 유지한다.
+- KRX 유가증권/코스닥/ETF 일별매매정보 provider를 추가하되, 전체 응답 중 현재 사용자 Holding/TradeTransaction 종목만 `MarketPrice`로 upsert한다.
+- KRX 시세 저장 후 최신 기준일이면 기존 흐름으로 `Holding.currentPrice`를 갱신하고, HoldingSnapshot 자동 생성은 별도 정책 확정 전까지 TODO로 유지한다.
+- local minimal seed는 실제 KRX로 수집 가능한 STOCK 종목 마스터를 직접 넣지 않고, KRX sync 이후 실제 ticker 기준으로 거래/보유 샘플을 연결하도록 정리했다.
+- 시세는 내 종목만 저장, 배당은 내 STOCK 종목만 2020년 이후 수집, ETF 분배금은 수동 입력 유지 정책을 문서화했다.

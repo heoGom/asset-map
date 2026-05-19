@@ -16,7 +16,7 @@ public class SecurityItem extends BaseEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(nullable = false)
+	@Column(nullable = false, unique = true)
 	private String ticker;
 
 	private String isinCode;

@@ -8,10 +8,13 @@ public record AdminSyncResponse(
 		String basDd,
 		int kospiImportedCount,
 		int kosdaqImportedCount,
+		int targetSecurityCount,
+		int importedPriceCount,
 		int receivedCount,
 		int insertedCount,
 		int updatedCount,
 		int skippedCount,
+		int failedCount,
 		String message,
 		DataSyncStatusResponse syncStatus
 ) {

@@ -10,7 +10,11 @@ import com.assetmap.backend.securityitem.SecurityItemRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -39,16 +43,29 @@ public class MarketPriceSyncService {
 	 */
 	@Transactional
 	public SyncUpsertResult upsertImportedPrices(List<ImportedMarketPrice> importedPrices) {
+		Map<String, SecurityItem> securitiesByTicker = securityItemRepository.findByTickerIn(
+				importedPrices.stream()
+						.map(ImportedMarketPrice::ticker)
+						.filter(StringUtils::hasText)
+						.collect(Collectors.toSet())
+		).stream().collect(Collectors.toMap(SecurityItem::getTicker, Function.identity(), (left, right) -> left));
+		return upsertImportedPrices(importedPrices, securitiesByTicker.values());
+	}
+
+	@Transactional
+	public SyncUpsertResult upsertImportedPrices(List<ImportedMarketPrice> importedPrices, Collection<SecurityItem> targetSecurities) {
 		int inserted = 0;
 		int updated = 0;
 		int skipped = 0;
+		Map<String, SecurityItem> securitiesByTicker = targetSecurities.stream()
+				.collect(Collectors.toMap(SecurityItem::getTicker, Function.identity(), (left, right) -> left));
 
 		for (ImportedMarketPrice imported : importedPrices) {
 			if (!isValid(imported)) {
 				skipped++;
 				continue;
 			}
-			SecurityItem securityItem = securityItemRepository.findByTicker(imported.ticker()).orElse(null);
+			SecurityItem securityItem = securitiesByTicker.get(imported.ticker());
 			if (securityItem == null) {
 				skipped++;
 				continue;
@@ -66,6 +83,13 @@ public class MarketPriceSyncService {
 						imported.changeAmount() == null ? BigDecimal.ZERO : imported.changeAmount(),
 						imported.changeRate() == null ? BigDecimal.ZERO : imported.changeRate(),
 						imported.volume(),
+						imported.openPrice(),
+						imported.highPrice(),
+						imported.lowPrice(),
+						imported.tradingValue(),
+						imported.marketCap(),
+						imported.nav(),
+						imported.underlyingIndexName(),
 						source,
 						LocalDateTime.now()
 				));
@@ -79,6 +103,13 @@ public class MarketPriceSyncService {
 					imported.changeAmount() == null ? BigDecimal.ZERO : imported.changeAmount(),
 					imported.changeRate() == null ? BigDecimal.ZERO : imported.changeRate(),
 					imported.volume(),
+					imported.openPrice(),
+					imported.highPrice(),
+					imported.lowPrice(),
+					imported.tradingValue(),
+					imported.marketCap(),
+					imported.nav(),
+					imported.underlyingIndexName(),
 					LocalDateTime.now()
 			);
 			updateHoldingsIfLatest(marketPrice);

@@ -1,5 +1,6 @@
 package com.assetmap.backend.datasync;
 
+import com.assetmap.backend.auth.SecurityUtil;
 import com.assetmap.backend.common.response.ApiResponse;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +31,6 @@ public class AdminSyncController {
 
 	@PostMapping("/market-prices")
 	public ApiResponse<AdminSyncResponse> syncMarketPrices(@RequestBody(required = false) AdminSyncRequest request) {
-		return ApiResponse.success(adminSyncService.syncMarketPrices(request));
+		return ApiResponse.success(adminSyncService.syncMarketPrices(SecurityUtil.getCurrentUserId(), request));
 	}
 }

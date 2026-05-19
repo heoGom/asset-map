@@ -5,11 +5,18 @@ import com.assetmap.backend.datasync.provider.ImportedMarketPrice;
 import com.assetmap.backend.datasync.provider.ImportedSecurityMaster;
 import com.assetmap.backend.datasync.provider.MarketPriceProvider;
 import com.assetmap.backend.datasync.provider.SecurityMasterProvider;
+import com.assetmap.backend.holding.HoldingRepository;
+import com.assetmap.backend.securityitem.SecurityItem;
+import com.assetmap.backend.securityitem.SecurityItemRepository;
+import com.assetmap.backend.securityitem.SecurityType;
+import com.assetmap.backend.transaction.TradeTransactionRepository;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +34,10 @@ public class AdminSyncService {
 	private final MarketPriceProvider marketPriceProvider;
 	private final SecurityMasterSyncService securityMasterSyncService;
 	private final MarketPriceSyncService marketPriceSyncService;
+	private final SecurityItemRepository securityItemRepository;
+	private final HoldingRepository holdingRepository;
+	private final TradeTransactionRepository tradeTransactionRepository;
+	private final DataSyncPolicyService dataSyncPolicyService;
 	private final String defaultSecurityMasterBasDd;
 
 	public AdminSyncService(
@@ -35,6 +46,10 @@ public class AdminSyncService {
 			MarketPriceProvider marketPriceProvider,
 			SecurityMasterSyncService securityMasterSyncService,
 			MarketPriceSyncService marketPriceSyncService,
+			SecurityItemRepository securityItemRepository,
+			HoldingRepository holdingRepository,
+			TradeTransactionRepository tradeTransactionRepository,
+			DataSyncPolicyService dataSyncPolicyService,
 			@Value("${external.krx.security-master.default-bas-dd:}") String defaultSecurityMasterBasDd
 	) {
 		this.dataSyncStatusService = dataSyncStatusService;
@@ -42,6 +57,10 @@ public class AdminSyncService {
 		this.marketPriceProvider = marketPriceProvider;
 		this.securityMasterSyncService = securityMasterSyncService;
 		this.marketPriceSyncService = marketPriceSyncService;
+		this.securityItemRepository = securityItemRepository;
+		this.holdingRepository = holdingRepository;
+		this.tradeTransactionRepository = tradeTransactionRepository;
+		this.dataSyncPolicyService = dataSyncPolicyService;
 		this.defaultSecurityMasterBasDd = defaultSecurityMasterBasDd;
 	}
 
@@ -54,9 +73,16 @@ public class AdminSyncService {
 		boolean force = request != null && request.forceOrFalse();
 		LocalDate basDd = resolveSecurityMasterBasDd(request);
 		String compactBasDd = basDd.format(COMPACT_DATE);
-		if (!dataSyncStatusService.shouldSyncToday(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, ALL, force)) {
-			DataSyncStatusResponse status = dataSyncStatusService.markSkipped(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, ALL, "Already synced today.");
-			return response("SKIPPED", DataSyncType.SECURITY_MASTER, ALL, compactBasDd, 0, 0, SyncUpsertResultEmpty.INSTANCE, "Already synced today.", status);
+		DataSyncDecision decision = dataSyncPolicyService.decideDailySync(
+				DataSyncType.SECURITY_MASTER,
+				DataSyncSource.KRX,
+				ALL,
+				force,
+				securityItemRepository.count() > 0
+		);
+		if (!decision.shouldRun()) {
+			DataSyncStatusResponse status = dataSyncStatusService.markSkipped(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, ALL, decision.message());
+			return response("SKIPPED", DataSyncType.SECURITY_MASTER, ALL, compactBasDd, 0, 0, 0, 0, SyncUpsertResultEmpty.INSTANCE, 0, decision.message(), status);
 		}
 
 		dataSyncStatusService.markRunning(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, ALL, "KRX security master sync started. basDd=" + compactBasDd);
@@ -75,48 +101,69 @@ public class AdminSyncService {
 					LocalDate.now(),
 					message
 			);
-			return response("SUCCESS", DataSyncType.SECURITY_MASTER, ALL, compactBasDd, kospi.size(), kosdaq.size(), result, message, status);
+			return response("SUCCESS", DataSyncType.SECURITY_MASTER, ALL, compactBasDd, kospi.size(), kosdaq.size(), 0, 0, result, 0, message, status);
 		} catch (BusinessException exception) {
 			DataSyncStatusResponse status = dataSyncStatusService.markFailed(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, ALL, exception.getMessage());
-			return response(exception.getErrorCode().name(), DataSyncType.SECURITY_MASTER, ALL, compactBasDd, 0, 0, SyncUpsertResultEmpty.INSTANCE, exception.getMessage(), status);
+			return response(exception.getErrorCode().name(), DataSyncType.SECURITY_MASTER, ALL, compactBasDd, 0, 0, 0, 0, SyncUpsertResultEmpty.INSTANCE, 1, exception.getMessage(), status);
 		} catch (RuntimeException exception) {
 			DataSyncStatusResponse status = dataSyncStatusService.markFailed(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, ALL, exception.getMessage());
-			return response("FAILED", DataSyncType.SECURITY_MASTER, ALL, compactBasDd, 0, 0, SyncUpsertResultEmpty.INSTANCE, exception.getMessage(), status);
+			return response("FAILED", DataSyncType.SECURITY_MASTER, ALL, compactBasDd, 0, 0, 0, 0, SyncUpsertResultEmpty.INSTANCE, 1, exception.getMessage(), status);
 		}
 	}
 
-	/**
-	 * 개발/관리용 endpoint에서 호출된다. 현재 provider는 Stub이며 실제 KRX HTTP 호출은 승인 후 구현한다.
-	 */
 	@Transactional
-	public AdminSyncResponse syncMarketPrices(AdminSyncRequest request) {
+	public AdminSyncResponse syncMarketPrices(Long userId, AdminSyncRequest request) {
 		boolean force = request != null && request.forceOrFalse();
-		LocalDate priceDate = request == null || request.priceDate() == null ? LocalDate.now() : request.priceDate();
-		String targetKey = priceDate.toString();
-		if (!dataSyncStatusService.shouldSyncToday(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, targetKey, force)) {
-			DataSyncStatusResponse status = dataSyncStatusService.markSkipped(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, targetKey, "Already synced today.");
-			return response("SKIPPED", DataSyncType.MARKET_PRICE, targetKey, null, 0, 0, SyncUpsertResultEmpty.INSTANCE, "Already synced today.", status);
+		LocalDate priceDate = resolveMarketPriceBasDd(request);
+		String compactBasDd = priceDate.format(COMPACT_DATE);
+		String targetKey = compactBasDd;
+		List<SecurityItem> targetSecurities = targetSecurities(userId);
+		if (targetSecurities.isEmpty()) {
+			DataSyncStatusResponse status = dataSyncStatusService.markSkipped(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, targetKey, "No target securities for current user.");
+			return response("SKIPPED", DataSyncType.MARKET_PRICE, targetKey, compactBasDd, 0, 0, 0, 0, SyncUpsertResultEmpty.INSTANCE, 0, "No target securities for current user.", status);
+		}
+		DataSyncDecision decision = dataSyncPolicyService.decideTargetDateSync(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, targetKey, force);
+		if (!decision.shouldRun()) {
+			DataSyncStatusResponse status = dataSyncStatusService.markSkipped(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, targetKey, decision.message());
+			return response("SKIPPED", DataSyncType.MARKET_PRICE, targetKey, compactBasDd, 0, 0, targetSecurities.size(), 0, SyncUpsertResultEmpty.INSTANCE, 0, decision.message(), status);
 		}
 
-		dataSyncStatusService.markRunning(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, targetKey, "KRX market price sync stub started.");
+		dataSyncStatusService.markRunning(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, targetKey, "KRX market price sync started. basDd=" + compactBasDd);
 		try {
 			List<ImportedMarketPrice> imported = new ArrayList<>();
-			imported.addAll(marketPriceProvider.fetchKospiPrices(priceDate));
-			imported.addAll(marketPriceProvider.fetchKosdaqPrices(priceDate));
-			// TODO: ETF price sync should be limited to held/traded/watchlist ETFs when watchlist exists.
-			imported.addAll(marketPriceProvider.fetchEtfPrices(priceDate));
-			SyncUpsertResult result = marketPriceSyncService.upsertImportedPrices(imported);
+			List<String> kospiTickers = targetTickers(targetSecurities, "KOSPI");
+			List<String> kosdaqTickers = targetTickers(targetSecurities, "KOSDAQ");
+			List<String> etfTickers = targetSecurities.stream()
+					.filter(security -> security.getSecurityType() == SecurityType.ETF)
+					.map(SecurityItem::getTicker)
+					.toList();
+			if (!kospiTickers.isEmpty()) {
+				imported.addAll(marketPriceProvider.fetchKospiPrices(priceDate, kospiTickers));
+			}
+			if (!kosdaqTickers.isEmpty()) {
+				imported.addAll(marketPriceProvider.fetchKosdaqPrices(priceDate, kosdaqTickers));
+			}
+			if (!etfTickers.isEmpty()) {
+				imported.addAll(marketPriceProvider.fetchEtfPrices(priceDate, etfTickers));
+			}
+			SyncUpsertResult result = marketPriceSyncService.upsertImportedPrices(imported, targetSecurities);
+			int importedPriceCount = result.insertedCount() + result.updatedCount();
+			String message = "KRX market price sync completed. basDd=%s target=%d imported=%d skipped=%d"
+					.formatted(compactBasDd, targetSecurities.size(), importedPriceCount, result.skippedCount());
 			DataSyncStatusResponse status = dataSyncStatusService.markSuccess(
 					DataSyncType.MARKET_PRICE,
 					DataSyncSource.KRX,
 					targetKey,
 					priceDate,
-					"KRX market price sync stub completed. No external API is called."
+					message
 			);
-			return response("STUB", DataSyncType.MARKET_PRICE, targetKey, null, 0, 0, result, "KRX market price sync stub completed. No external API is called.", status);
+			return response("SUCCESS", DataSyncType.MARKET_PRICE, targetKey, compactBasDd, 0, 0, targetSecurities.size(), importedPriceCount, result, 0, message, status);
+		} catch (BusinessException exception) {
+			DataSyncStatusResponse status = dataSyncStatusService.markFailed(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, targetKey, exception.getMessage());
+			return response(exception.getErrorCode().name(), DataSyncType.MARKET_PRICE, targetKey, compactBasDd, 0, 0, targetSecurities.size(), 0, SyncUpsertResultEmpty.INSTANCE, 1, exception.getMessage(), status);
 		} catch (RuntimeException exception) {
 			DataSyncStatusResponse status = dataSyncStatusService.markFailed(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, targetKey, exception.getMessage());
-			return response("FAILED", DataSyncType.MARKET_PRICE, targetKey, null, 0, 0, SyncUpsertResultEmpty.INSTANCE, exception.getMessage(), status);
+			return response("FAILED", DataSyncType.MARKET_PRICE, targetKey, compactBasDd, 0, 0, targetSecurities.size(), 0, SyncUpsertResultEmpty.INSTANCE, 1, exception.getMessage(), status);
 		}
 	}
 
@@ -127,7 +174,10 @@ public class AdminSyncService {
 			String basDd,
 			int kospiImportedCount,
 			int kosdaqImportedCount,
+			int targetSecurityCount,
+			int importedPriceCount,
 			SyncUpsertResult upsertResult,
+			int failedCount,
 			String message,
 			DataSyncStatusResponse status
 	) {
@@ -139,10 +189,13 @@ public class AdminSyncService {
 				basDd,
 				kospiImportedCount,
 				kosdaqImportedCount,
+				targetSecurityCount,
+				importedPriceCount,
 				upsertResult.receivedCount(),
 				upsertResult.insertedCount(),
 				upsertResult.updatedCount(),
 				upsertResult.skippedCount(),
+				failedCount,
 				message,
 				status
 		);
@@ -156,6 +209,36 @@ public class AdminSyncService {
 			return parseConfiguredDate(defaultSecurityMasterBasDd);
 		}
 		return LocalDate.now();
+	}
+
+	private LocalDate resolveMarketPriceBasDd(AdminSyncRequest request) {
+		if (request != null && request.basDd() != null) {
+			return request.basDd();
+		}
+		if (request != null && request.priceDate() != null) {
+			return request.priceDate();
+		}
+		return LocalDate.now();
+	}
+
+	private List<SecurityItem> targetSecurities(Long userId) {
+		Map<Long, SecurityItem> targets = new LinkedHashMap<>();
+		holdingRepository.findDistinctSecurityItemsByUserId(userId)
+				.forEach(security -> targets.put(security.getId(), security));
+		tradeTransactionRepository.findDistinctSecurityItemsByUserId(userId)
+				.forEach(security -> targets.put(security.getId(), security));
+		return targets.values().stream()
+				.filter(security -> security.getSecurityType() == SecurityType.STOCK || security.getSecurityType() == SecurityType.ETF)
+				.toList();
+	}
+
+	private List<String> targetTickers(List<SecurityItem> securities, String market) {
+		return securities.stream()
+				.filter(security -> security.getSecurityType() == SecurityType.STOCK)
+				.filter(security -> StringUtils.hasText(security.getMarket()))
+				.filter(security -> security.getMarket().toUpperCase().contains(market))
+				.map(SecurityItem::getTicker)
+				.toList();
 	}
 
 	private LocalDate parseConfiguredDate(String value) {

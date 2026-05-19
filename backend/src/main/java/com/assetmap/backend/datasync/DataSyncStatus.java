@@ -73,7 +73,9 @@ public class DataSyncStatus extends BaseEntity {
 	}
 
 	public void markSkipped(String message) {
-		this.status = DataSyncStatusValue.SKIPPED;
+		if (this.lastSuccessDate == null) {
+			this.status = DataSyncStatusValue.SKIPPED;
+		}
 		this.message = message;
 	}
 

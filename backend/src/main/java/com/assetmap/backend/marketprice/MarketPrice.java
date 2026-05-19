@@ -44,6 +44,26 @@ public class MarketPrice extends BaseEntity {
 
 	private Long volume;
 
+	@Column(precision = 19, scale = 6)
+	private BigDecimal openPrice;
+
+	@Column(precision = 19, scale = 6)
+	private BigDecimal highPrice;
+
+	@Column(precision = 19, scale = 6)
+	private BigDecimal lowPrice;
+
+	@Column(precision = 28, scale = 2)
+	private BigDecimal tradingValue;
+
+	@Column(precision = 28, scale = 2)
+	private BigDecimal marketCap;
+
+	@Column(precision = 19, scale = 6)
+	private BigDecimal nav;
+
+	private String underlyingIndexName;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private MarketDataSource source;
@@ -55,6 +75,27 @@ public class MarketPrice extends BaseEntity {
 	}
 
 	public MarketPrice(SecurityItem securityItem, LocalDate priceDate, BigDecimal closePrice, BigDecimal currentPrice, BigDecimal changeAmount, BigDecimal changeRate, Long volume, MarketDataSource source, LocalDateTime fetchedAt) {
+		this(securityItem, priceDate, closePrice, currentPrice, changeAmount, changeRate, volume, null, null, null, null, null, null, null, source, fetchedAt);
+	}
+
+	public MarketPrice(
+			SecurityItem securityItem,
+			LocalDate priceDate,
+			BigDecimal closePrice,
+			BigDecimal currentPrice,
+			BigDecimal changeAmount,
+			BigDecimal changeRate,
+			Long volume,
+			BigDecimal openPrice,
+			BigDecimal highPrice,
+			BigDecimal lowPrice,
+			BigDecimal tradingValue,
+			BigDecimal marketCap,
+			BigDecimal nav,
+			String underlyingIndexName,
+			MarketDataSource source,
+			LocalDateTime fetchedAt
+	) {
 		this.securityItem = securityItem;
 		this.priceDate = priceDate;
 		this.closePrice = closePrice;
@@ -62,16 +103,48 @@ public class MarketPrice extends BaseEntity {
 		this.changeAmount = changeAmount;
 		this.changeRate = changeRate;
 		this.volume = volume;
+		this.openPrice = openPrice;
+		this.highPrice = highPrice;
+		this.lowPrice = lowPrice;
+		this.tradingValue = tradingValue;
+		this.marketCap = marketCap;
+		this.nav = nav;
+		this.underlyingIndexName = underlyingIndexName;
 		this.source = source;
 		this.fetchedAt = fetchedAt == null ? LocalDateTime.now() : fetchedAt;
 	}
 
 	public void update(BigDecimal closePrice, BigDecimal currentPrice, BigDecimal changeAmount, BigDecimal changeRate, Long volume, LocalDateTime fetchedAt) {
+		update(closePrice, currentPrice, changeAmount, changeRate, volume, null, null, null, null, null, null, null, fetchedAt);
+	}
+
+	public void update(
+			BigDecimal closePrice,
+			BigDecimal currentPrice,
+			BigDecimal changeAmount,
+			BigDecimal changeRate,
+			Long volume,
+			BigDecimal openPrice,
+			BigDecimal highPrice,
+			BigDecimal lowPrice,
+			BigDecimal tradingValue,
+			BigDecimal marketCap,
+			BigDecimal nav,
+			String underlyingIndexName,
+			LocalDateTime fetchedAt
+	) {
 		this.closePrice = closePrice;
 		this.currentPrice = currentPrice;
 		this.changeAmount = changeAmount;
 		this.changeRate = changeRate;
 		this.volume = volume;
+		this.openPrice = openPrice;
+		this.highPrice = highPrice;
+		this.lowPrice = lowPrice;
+		this.tradingValue = tradingValue;
+		this.marketCap = marketCap;
+		this.nav = nav;
+		this.underlyingIndexName = underlyingIndexName;
 		this.fetchedAt = fetchedAt == null ? LocalDateTime.now() : fetchedAt;
 	}
 
@@ -83,6 +156,13 @@ public class MarketPrice extends BaseEntity {
 	public BigDecimal getChangeAmount() { return changeAmount; }
 	public BigDecimal getChangeRate() { return changeRate; }
 	public Long getVolume() { return volume; }
+	public BigDecimal getOpenPrice() { return openPrice; }
+	public BigDecimal getHighPrice() { return highPrice; }
+	public BigDecimal getLowPrice() { return lowPrice; }
+	public BigDecimal getTradingValue() { return tradingValue; }
+	public BigDecimal getMarketCap() { return marketCap; }
+	public BigDecimal getNav() { return nav; }
+	public String getUnderlyingIndexName() { return underlyingIndexName; }
 	public MarketDataSource getSource() { return source; }
 	public LocalDateTime getFetchedAt() { return fetchedAt; }
 }
