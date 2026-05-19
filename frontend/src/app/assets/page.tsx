@@ -26,6 +26,7 @@ import AuthGate from "@/components/auth/AuthGate";
 import { formatCurrency, formatPercent, toFiniteNumber } from "@/lib/format";
 import { useLanguage } from "@/lib/language-provider";
 import { getCategoryLabel } from "@/lib/category-labels";
+import SecurityCombobox from "@/components/securities/SecurityCombobox";
 
 export default function AssetsPage() {
   const [isTradeFormOpen, setIsTradeFormOpen] = useState(false);
@@ -299,19 +300,17 @@ function MarketPriceInput({ holdings }: { holdings: HoldingResponse[] }) {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               종목
-              <select
-                required
+              <SecurityCombobox
+                options={uniqueHoldings.map((holding) => ({
+                  id: holding.securityItemId,
+                  ticker: holding.ticker,
+                  name: holding.securityName,
+                  currency: holding.currency,
+                }))}
                 value={form.securityItemId}
-                onChange={(event) => setForm({ ...form, securityItemId: event.target.value })}
-                className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-              >
-                <option value="">종목 선택</option>
-                {uniqueHoldings.map((holding) => (
-                  <option key={holding.securityItemId} value={holding.securityItemId}>
-                    {holding.ticker} - {holding.securityName}
-                  </option>
-                ))}
-              </select>
+                placeholder="보유 종목 검색"
+                onChange={(securityItemId) => setForm({ ...form, securityItemId })}
+              />
             </label>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               가격일

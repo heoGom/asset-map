@@ -216,3 +216,9 @@
 - 배당 이벤트 중복 발견 시에도 거래 사용자별 `DividendPayment` 생성을 재시도해 기존 이벤트에 대해 누락된 payment가 보강되도록 했다.
 - 날짜별 시세 상태는 `TRADED_SECURITIES_YYYYMMDD`, 전체 시세 상태는 `TRADED_SECURITIES`, 배당 상태는 `TRADED_STOCK_SECURITIES`로 `DataSyncStatus`에 기록한다.
 - local seed는 실제 KRX STOCK master를 포함하지 않고, 실제 공개 ticker를 참조하는 최소 사용자/계좌/거래 샘플 정책을 유지한다.
+
+### 종목 선택 자동완성 UI 적용
+
+- 거래 입력, 현재가 직접 입력, 배당/분배금 이벤트 입력, 종목 분류 입력의 종목 선택 UI를 검색 가능한 공통 `SecurityCombobox`로 교체했다.
+- 종목명, ticker, 시장, 통화, 유형 텍스트를 기준으로 클라이언트 필터링하며 대량 종목 목록은 최대 표시 개수로 제한해 긴 select 렌더링을 피한다.
+- 거래 입력 submit 조건에 종목/계좌 선택 여부를 명시적으로 포함해 기존 select required 역할을 보완했다.

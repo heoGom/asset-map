@@ -17,6 +17,7 @@ import { importMyStockDividends, DividendImportResult } from "@/lib/api/dividend
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import MonthlyDividendChart from "@/components/dashboard/MonthlyDividendChart";
 import AuthGate from "@/components/auth/AuthGate";
+import SecurityCombobox from "@/components/securities/SecurityCombobox";
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { useAuth } from "@/lib/auth-provider";
 import { useLanguage } from "@/lib/language-provider";
@@ -325,12 +326,12 @@ export default function DividendsPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <label className={labelClass}>
                   종목
-                  <select required value={eventForm.securityItemId} onChange={(event) => handleSecurityChange(event.target.value)} className={inputClass}>
-                    <option value="">종목 선택</option>
-                    {securities.map((security) => (
-                      <option key={security.id} value={security.id}>{security.ticker} - {security.name}</option>
-                    ))}
-                  </select>
+                  <SecurityCombobox
+                    options={securities}
+                    value={eventForm.securityItemId}
+                    placeholder="종목명 또는 코드 검색"
+                    onChange={handleSecurityChange}
+                  />
                   {securities.length === 0 && (
                     <Link href="/securities" className="mt-1 inline-block text-xs font-semibold text-emerald-600 hover:text-emerald-700">
                       새 종목 등록

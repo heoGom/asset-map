@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/security-classifications";
 import { createSecurityItem, getSecurityItems } from "@/lib/api/security-items";
 import { useLanguage } from "@/lib/language-provider";
+import SecurityCombobox from "@/components/securities/SecurityCombobox";
 
 const securityTypes = ["STOCK", "ETF", "REIT", "BOND", "CASH", "CRYPTO"];
 const countryGroups = ["DOMESTIC", "OVERSEAS", "UNKNOWN"];
@@ -253,12 +254,12 @@ export default function SecuritiesPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <label className={labelClass}>
                   종목
-                  <select required value={classificationForm.securityItemId} onChange={(event) => setClassificationForm({ ...classificationForm, securityItemId: event.target.value })} className={inputClass}>
-                    <option value="">종목 선택</option>
-                    {securities.map((security) => (
-                      <option key={security.id} value={security.id}>{security.ticker} - {security.name}</option>
-                    ))}
-                  </select>
+                  <SecurityCombobox
+                    options={securities}
+                    value={classificationForm.securityItemId}
+                    placeholder="분류할 종목 검색"
+                    onChange={(securityItemId) => setClassificationForm({ ...classificationForm, securityItemId })}
+                  />
                 </label>
                 <label className={labelClass}>
                   국가 구분

@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccounts } from "@/lib/api/accounts";
 import { getSecurityItems } from "@/lib/api/security-items";
 import { createTrade, TransactionSource, TradeType } from "@/lib/api/trades";
+import SecurityCombobox from "@/components/securities/SecurityCombobox";
 
 interface TradeInputFormProps {
   onSuccess: () => void;
@@ -61,7 +62,7 @@ export default function TradeInputForm({ onSuccess, initialAccountId, initialSec
     },
   });
 
-  const isSubmitDisabled = mutation.isPending || !hasAccounts || !hasSecurities;
+  const isSubmitDisabled = mutation.isPending || !hasAccounts || !hasSecurities || !form.accountId || !form.securityItemId;
 
   useEffect(() => {
     setForm((prev) => ({
@@ -127,20 +128,13 @@ export default function TradeInputForm({ onSuccess, initialAccountId, initialSec
               새 종목 등록
             </Link>
           </span>
-          <select
-            required
+          <SecurityCombobox
+            options={securities}
             value={form.securityItemId}
             disabled={!hasSecurities}
-            onChange={(event) => setForm({ ...form, securityItemId: event.target.value })}
-            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-          >
-            <option value="">종목 선택</option>
-            {securities.map((security) => (
-              <option key={security.id} value={security.id}>
-                {security.ticker} - {security.name}
-              </option>
-            ))}
-          </select>
+            placeholder="종목명 또는 코드 검색"
+            onChange={(securityItemId) => setForm({ ...form, securityItemId })}
+          />
           {!isSecuritiesLoading && !hasSecurities && (
             <p className="mt-1 text-xs text-amber-700">등록된 종목이 없습니다</p>
           )}
