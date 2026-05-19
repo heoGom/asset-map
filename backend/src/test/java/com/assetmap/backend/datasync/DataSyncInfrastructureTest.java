@@ -66,16 +66,17 @@ class DataSyncInfrastructureTest {
 	@Test
 	void upsertsSecurityMasterByTicker() {
 		SyncUpsertResult first = securityMasterSyncService.upsertImportedSecurities(List.of(
-				new ImportedSecurityMaster("005930", null, "삼성전자", "삼성전자", "Samsung Electronics", "KOSPI", SecurityType.STOCK, LocalDate.of(1975, 6, 11), "KRW", DataSyncSource.KRX)
+				new ImportedSecurityMaster("005930", "KR7005930003", "삼성전자", "삼성전자", "Samsung Electronics", "KOSPI", SecurityType.STOCK, LocalDate.of(1975, 6, 11), "KRW", DataSyncSource.KRX)
 		));
 		SyncUpsertResult second = securityMasterSyncService.upsertImportedSecurities(List.of(
-				new ImportedSecurityMaster("005930", null, "삼성전자보통주", "삼성전자", "Samsung Electronics", "KOSPI", SecurityType.STOCK, LocalDate.of(1975, 6, 11), "KRW", DataSyncSource.KRX)
+				new ImportedSecurityMaster("005930", "KR7005930003", "삼성전자보통주", "삼성전자", "Samsung Electronics", "KOSPI", SecurityType.STOCK, LocalDate.of(1975, 6, 11), "KRW", DataSyncSource.KRX)
 		));
 
 		assertThat(first.insertedCount()).isEqualTo(1);
 		assertThat(second.updatedCount()).isEqualTo(1);
 		assertThat(securityItemRepository.findAll()).hasSize(1);
 		assertThat(securityItemRepository.findByTicker("005930").orElseThrow().getName()).isEqualTo("삼성전자보통주");
+		assertThat(securityItemRepository.findByTicker("005930").orElseThrow().getIsinCode()).isEqualTo("KR7005930003");
 	}
 
 	@Test

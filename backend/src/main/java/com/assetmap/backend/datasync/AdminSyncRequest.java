@@ -4,7 +4,8 @@ import java.time.LocalDate;
 
 public record AdminSyncRequest(
 		Boolean force,
-		LocalDate priceDate
+		LocalDate priceDate,
+		LocalDate basDd
 ) {
 
 	public boolean forceOrFalse() {

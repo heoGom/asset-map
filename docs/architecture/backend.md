@@ -23,7 +23,7 @@ Spring Boot 기반의 Asset Map 백엔드는 거래내역을 원천 데이터로
 | 엔티티 | 설명 | 주요 필드 |
 | --- | --- | --- |
 | `Account` | 증권/연금/현금 계좌 정보 | `userId`, `name`, `brokerName`, `accountType`, `currency` |
-| `SecurityItem` | 종목 마스터 정보 | `ticker`, `name`, `market`, `country`, `securityType` |
+| `SecurityItem` | 종목 마스터 정보 | `ticker`, `isinCode`, `name`, `market`, `country`, `securityType` |
 | `TradeTransaction` | 매수/매도/초기보유 원천 거래내역 | `tradeDate`, `tradeType`, `quantity`, `price`, `netAmount` |
 | `Holding` | 거래내역으로 갱신되는 현재 보유 상태 캐시 | `account`, `securityItem`, `quantity`, `averagePrice`, `currentPrice` |
 | `SecurityClassification` | 자산 분류 체계 | `assetGroup`, `sector`, `countryGroup`, `listingCountry`, `exposureCountry`, `underlyingIndex`, `hedged` |
@@ -88,7 +88,7 @@ com.assetmap.backend
 
 ### 5. Admin Sync
 - `GET /api/admin/sync/status`: syncType/source/targetKey별 동기화 상태 조회
-- `POST /api/admin/sync/security-master`: KRX 종목 마스터 동기화 골격. 현재 Stub이며 외부 API를 호출하지 않습니다.
+- `POST /api/admin/sync/security-master`: KRX 유가증권/코스닥 종목기본정보를 호출해 전체 종목 마스터를 `SecurityItem`에 ticker 기준 upsert
 - `POST /api/admin/sync/market-prices`: KRX 시세 동기화 골격. 현재 Stub이며 외부 API를 호출하지 않습니다.
 
 ## 구현 상세
@@ -109,8 +109,8 @@ com.assetmap.backend
 
 ### 데이터 동기화 구조
 - `DataSyncStatus`는 `syncType`, `source`, `targetKey` 조합으로 동기화 실행 상태와 마지막 성공 일자를 저장합니다.
-- KRX 승인 전까지 `SecurityMasterProvider`, `MarketPriceProvider`는 Stub 구현만 사용하며 실제 HTTP 호출과 API key 설정은 없습니다.
-- 종목 마스터는 KRX 승인 후 전체 수집 대상으로 보고 `ticker` 기준으로 `SecurityItem`을 upsert합니다. `isinCode` 등 추가 식별자는 DB 컬럼 확장 검토 TODO입니다.
+- KRX 종목 마스터는 `KRX_API_KEY` 환경변수를 `AUTH_KEY` header로 전달하고, `{"basDd":"YYYYMMDD"}` JSON body로 유가증권/코스닥 종목기본정보를 호출합니다.
+- 종목 마스터는 전체 수집 대상으로 보고 `ticker` 기준으로 `SecurityItem`을 upsert합니다. KRX `ISU_CD`는 `isinCode`에 저장합니다.
 - 시세는 외부 원천이 전체 시장 단위로 내려오더라도 저장은 현재 DB에 존재하는 종목, 향후 보유/거래/관심 종목 기준으로 제한합니다.
 
 ## 실행 및 검증 (Run & Verify)
@@ -123,6 +123,7 @@ cd backend
 ```
 - API Base: `http://localhost:8080`
 - Local DB: `jdbc:mysql://localhost:23306/asset_map?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true`
+- Local secrets: `backend/.local-secrets.properties`에 `KRX_API_KEY`, 공공데이터 service key, JWT secret 등 로컬 인증값을 모아 둡니다. 실제 파일은 Git 제외 대상이며, 템플릿은 `backend/.local-secrets.properties.example`입니다.
 
 ### Profile 구성
 - `application.properties`: 공통 설정만 관리하며 기본 profile은 `local`입니다.

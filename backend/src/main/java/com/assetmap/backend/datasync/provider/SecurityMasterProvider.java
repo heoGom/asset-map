@@ -1,12 +1,26 @@
 package com.assetmap.backend.datasync.provider;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface SecurityMasterProvider {
 
-	List<ImportedSecurityMaster> fetchAllKospi();
+	default List<ImportedSecurityMaster> fetchAllKospi() {
+		return fetchAllKospi(LocalDate.now());
+	}
 
-	List<ImportedSecurityMaster> fetchAllKosdaq();
+	default List<ImportedSecurityMaster> fetchAllKosdaq() {
+		return fetchAllKosdaq(LocalDate.now());
+	}
 
-	List<ImportedSecurityMaster> fetchAllEtf();
+	default List<ImportedSecurityMaster> fetchAllEtf() {
+		return fetchAllEtf(LocalDate.now());
+	}
+
+	List<ImportedSecurityMaster> fetchAllKospi(LocalDate basDd);
+
+	List<ImportedSecurityMaster> fetchAllKosdaq(LocalDate basDd);
+
+	List<ImportedSecurityMaster> fetchAllEtf(LocalDate basDd);
+
 }

@@ -19,6 +19,8 @@ public class SecurityItem extends BaseEntity {
 	@Column(nullable = false)
 	private String ticker;
 
+	private String isinCode;
+
 	@Column(nullable = false)
 	private String name;
 
@@ -36,7 +38,12 @@ public class SecurityItem extends BaseEntity {
 	}
 
 	public SecurityItem(String ticker, String name, String market, String country, String currency, SecurityType securityType) {
+		this(ticker, null, name, market, country, currency, securityType);
+	}
+
+	public SecurityItem(String ticker, String isinCode, String name, String market, String country, String currency, SecurityType securityType) {
 		this.ticker = ticker;
+		this.isinCode = isinCode;
 		this.name = name;
 		this.market = market;
 		this.country = country;
@@ -53,12 +60,26 @@ public class SecurityItem extends BaseEntity {
 		if (request.securityType() != null) this.securityType = request.securityType();
 	}
 
+	public void updateMasterData(String ticker, String isinCode, String name, String market, String country, String currency, SecurityType securityType) {
+		if (ticker != null) this.ticker = ticker;
+		if (isinCode != null) this.isinCode = isinCode;
+		if (name != null) this.name = name;
+		if (market != null) this.market = market;
+		if (country != null) this.country = country;
+		if (currency != null) this.currency = currency;
+		if (securityType != null) this.securityType = securityType;
+	}
+
 	public Long getId() {
 		return id;
 	}
 
 	public String getTicker() {
 		return ticker;
+	}
+
+	public String getIsinCode() {
+		return isinCode;
 	}
 
 	public String getName() {

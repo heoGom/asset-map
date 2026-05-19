@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public record SecurityItemResponse(
 		Long id,
 		String ticker,
+		String isinCode,
 		String name,
 		String market,
 		String country,
@@ -18,6 +19,7 @@ public record SecurityItemResponse(
 		return new SecurityItemResponse(
 				securityItem.getId(),
 				securityItem.getTicker(),
+				securityItem.getIsinCode(),
 				securityItem.getName(),
 				securityItem.getMarket(),
 				securityItem.getCountry(),

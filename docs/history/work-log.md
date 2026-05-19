@@ -186,3 +186,12 @@
 - `SecurityItem`은 ticker 기준 upsert 구조를 준비했고, 종목 마스터는 KRX 승인 후 전체 수집 대상으로 연결할 예정이다.
 - `MarketPrice`는 ticker 매칭 후 `securityItemId + priceDate + source` 기준 upsert 구조를 준비했고, 시세 저장 대상은 보유/거래/관심 종목 중심으로 제한할 예정이다.
 - 관리자용 `/api/admin/sync/status`, `/api/admin/sync/security-master`, `/api/admin/sync/market-prices` 기본 endpoint를 추가했다.
+
+### KRX 종목 마스터 수집 기능 추가
+
+- KRX 유가증권/코스닥 종목기본정보 API를 `KRX_API_KEY` 환경변수 기반 `AUTH_KEY` header와 JSON body로 호출하도록 구현했다.
+- 응답 `OutBlock_1`의 표준코드, 단축코드, 종목명, 시장구분, 상장일을 내부 import DTO로 변환하고 `SecurityItem`은 ticker 기준으로 upsert한다.
+- 종목 마스터는 전체 수집 대상이며, `SecurityItem`에는 장기 식별용 `isinCode`를 추가했다.
+- `DataSyncStatus`는 `SECURITY_MASTER`/`KRX`/`ALL` 기준으로 실행 상태와 당일 성공 여부를 관리하고, `force=true`면 재실행한다.
+- 이번 단계에서는 KRX 시세, ETF 일별매매정보, `MarketPrice`, `Holding.currentPrice`, `HoldingSnapshot` 저장은 연결하지 않았다.
+- 시세 수집은 다음 단계에서 현재 보유/거래/관심 종목만 DB에 저장하고 화면은 DB만 조회하는 구조로 유지한다.
