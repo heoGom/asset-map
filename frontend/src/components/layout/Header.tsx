@@ -1,64 +1,127 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-provider";
 import { useLanguage } from "@/lib/language-provider";
 import { useTheme } from "@/lib/theme-provider";
 
 export default function Header() {
+  const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
-  const { language, toggleLanguage, t } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
+  const { theme, setTheme } = useTheme();
+  const primaryLinks = [
+    { href: "/assets", label: t("nav.assets") },
+    { href: "/dividends", label: t("nav.dividends") },
+    { href: "/accounts", label: t("nav.accounts") },
+  ];
+  const securitiesActive = pathname === "/securities" || pathname.startsWith("/securities/");
 
   return (
-    <nav className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-emerald-600"></div>
-          <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Asset Map</span>
+    <nav className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/95 backdrop-blur dark:border-gray-800 dark:bg-gray-950/95">
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+        <Link href="/assets" className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-sm font-black text-white">
+            AM
+          </span>
+          <span className="truncate text-lg font-bold text-gray-950 dark:text-white">Asset Map</span>
         </Link>
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex gap-6 text-sm font-medium text-gray-600 dark:text-gray-300">
-            <Link href="/assets" className="hover:text-emerald-600">{t("nav.assets")}</Link>
-            <Link href="/dividends" className="hover:text-emerald-600">{t("nav.dividends")}</Link>
-            <Link href="/securities" className="hover:text-emerald-600">{t("nav.securities")}</Link>
-            <Link href="/accounts" className="hover:text-emerald-600">{t("nav.accounts")}</Link>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="flex flex-wrap items-center gap-1 rounded-lg bg-gray-100 p-1 text-sm font-semibold text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+            {primaryLinks.map((link) => {
+              const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`rounded-md px-3 py-2 transition ${
+                    active
+                      ? "bg-white text-gray-950 shadow-sm dark:bg-gray-800 dark:text-white"
+                      : "hover:bg-white/70 hover:text-gray-950 dark:hover:bg-gray-800/70 dark:hover:text-white"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+            <details className="group relative">
+              <summary
+                className={`cursor-pointer list-none rounded-md px-3 py-2 transition [&::-webkit-details-marker]:hidden ${
+                  securitiesActive
+                    ? "bg-white text-gray-950 shadow-sm dark:bg-gray-800 dark:text-white"
+                    : "hover:bg-white/70 hover:text-gray-950 dark:hover:bg-gray-800/70 dark:hover:text-white"
+                }`}
+              >
+                {t("nav.management")}
+              </summary>
+              <div className="absolute right-0 top-11 w-44 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                <Link
+                  href="/securities"
+                  className="block rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                >
+                  {t("nav.securities")}
+                </Link>
+              </div>
+            </details>
           </div>
-          <div className="flex items-center gap-2 border-l border-gray-200 pl-4 dark:border-gray-700">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-              aria-label={theme === "dark" ? t("nav.switchToLight") : t("nav.switchToDark")}
-              title={theme === "dark" ? t("nav.switchToLight") : t("nav.switchToDark")}
-            >
-              {theme === "dark" ? "Light" : "Dark"}
-            </button>
-            <button
-              type="button"
-              onClick={toggleLanguage}
-              className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-              aria-label={language === "ko" ? t("nav.switchToEnglish") : t("nav.switchToKorean")}
-              title={language === "ko" ? t("nav.switchToEnglish") : t("nav.switchToKorean")}
-            >
-              {language === "ko" ? "EN" : "KO"}
-            </button>
+
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            <div className="flex rounded-lg border border-gray-200 bg-white p-1 text-xs font-bold text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+              <button
+                type="button"
+                onClick={() => setTheme("light")}
+                className={`rounded-md px-2.5 py-1.5 transition ${theme === "light" ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-950" : "hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                aria-label={t("nav.switchToLight")}
+              >
+                Light
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme("dark")}
+                className={`rounded-md px-2.5 py-1.5 transition ${theme === "dark" ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-950" : "hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                aria-label={t("nav.switchToDark")}
+              >
+                Dark
+              </button>
+            </div>
+
+            <div className="flex rounded-lg border border-gray-200 bg-white p-1 text-xs font-bold text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+              <button
+                type="button"
+                onClick={() => setLanguage("ko")}
+                className={`rounded-md px-2.5 py-1.5 transition ${language === "ko" ? "bg-emerald-600 text-white" : "hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                aria-label={t("nav.switchToKorean")}
+              >
+                KO
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage("en")}
+                className={`rounded-md px-2.5 py-1.5 transition ${language === "en" ? "bg-emerald-600 text-white" : "hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                aria-label={t("nav.switchToEnglish")}
+              >
+                EN
+              </button>
+            </div>
+
             {isAuthenticated ? (
-              <>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{user?.nickname}</span>
+              <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1.5 dark:border-gray-700 dark:bg-gray-900">
+                <span className="max-w-28 truncate text-sm font-semibold text-gray-700 dark:text-gray-200">{user?.nickname}</span>
                 <button
                   type="button"
                   onClick={logout}
-                  className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                  className="rounded-md px-2 py-1 text-sm font-semibold text-gray-500 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
                 >
                   {t("nav.logout")}
                 </button>
-              </>
+              </div>
             ) : (
-              <>
-                <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-emerald-600 dark:text-gray-200">{t("nav.login")}</Link>
-                <Link href="/signup" className="rounded-lg bg-emerald-600 px-3 py-1 text-sm font-bold text-white hover:bg-emerald-700">{t("nav.signup")}</Link>
-              </>
+              <div className="flex items-center gap-2">
+                <Link href="/login" className="rounded-md px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-gray-800">{t("nav.login")}</Link>
+                <Link href="/signup" className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700">{t("nav.signup")}</Link>
+              </div>
             )}
           </div>
         </div>

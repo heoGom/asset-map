@@ -41,6 +41,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initialTheme = resolveInitialTheme();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setThemeState(initialTheme);
     applyTheme(initialTheme);
     if (!window.localStorage.getItem(THEME_STORAGE_KEY)) {

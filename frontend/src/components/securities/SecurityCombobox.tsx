@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 export interface SecurityComboboxOption {
   id: number;
@@ -33,6 +33,7 @@ export default function SecurityCombobox({
   emptyMessage = "일치하는 종목이 없습니다",
   maxVisible = 50,
 }: SecurityComboboxProps) {
+  const listboxId = useId();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -42,10 +43,7 @@ export default function SecurityCombobox({
     () => options.find((option) => option.id === Number(value)),
     [options, value]
   );
-
-  useEffect(() => {
-    setQuery(selectedOption ? optionLabel(selectedOption) : "");
-  }, [selectedOption]);
+  const inputValue = isOpen ? query : selectedOption ? optionLabel(selectedOption) : "";
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -59,10 +57,11 @@ export default function SecurityCombobox({
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = normalize(query);
+    const sortedOptions = [...options].sort(compareByTicker);
     if (!normalizedQuery) {
-      return options.slice(0, maxVisible);
+      return sortedOptions.slice(0, maxVisible);
     }
-    return options
+    return sortedOptions
       .filter((option) => {
         const target = normalize([
           option.ticker,
@@ -76,30 +75,34 @@ export default function SecurityCombobox({
       .slice(0, maxVisible);
   }, [maxVisible, options, query]);
 
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
-
   const chooseOption = (option: SecurityComboboxOption) => {
     onChange(String(option.id));
     setQuery(optionLabel(option));
     setIsOpen(false);
   };
+  const activeOption = filteredOptions[Math.min(activeIndex, filteredOptions.length - 1)];
 
   return (
     <div ref={wrapperRef} className="relative">
       <input
         type="text"
-        value={query}
+        value={inputValue}
         disabled={disabled}
         placeholder={placeholder}
         autoComplete="off"
         role="combobox"
+        aria-controls={listboxId}
         aria-expanded={isOpen}
         aria-autocomplete="list"
-        onFocus={() => setIsOpen(true)}
+        aria-activedescendant={isOpen && activeOption ? `${listboxId}-${activeOption.id}` : undefined}
+        onFocus={() => {
+          setQuery("");
+          setActiveIndex(0);
+          setIsOpen(true);
+        }}
         onChange={(event) => {
           setQuery(event.target.value);
+          setActiveIndex(0);
           onChange("");
           setIsOpen(true);
         }}
@@ -116,9 +119,9 @@ export default function SecurityCombobox({
             event.preventDefault();
             setActiveIndex((index) => Math.max(index - 1, 0));
           }
-          if (event.key === "Enter" && isOpen && filteredOptions[activeIndex]) {
+          if (event.key === "Enter" && isOpen && activeOption) {
             event.preventDefault();
-            chooseOption(filteredOptions[activeIndex]);
+            chooseOption(activeOption);
           }
           if (event.key === "Escape") {
             setIsOpen(false);
@@ -127,14 +130,21 @@ export default function SecurityCombobox({
         className={inputClass}
       />
       {isOpen && !disabled && (
-        <div className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+        <div
+          id={listboxId}
+          role="listbox"
+          className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
+        >
           {filteredOptions.length === 0 ? (
             <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">{emptyMessage}</div>
           ) : (
             filteredOptions.map((option, index) => (
               <button
                 key={option.id}
+                id={`${listboxId}-${option.id}`}
                 type="button"
+                role="option"
+                aria-selected={index === activeIndex}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => chooseOption(option)}
                 className={`block w-full px-3 py-2 text-left text-sm transition ${
@@ -162,4 +172,13 @@ function optionLabel(option: SecurityComboboxOption) {
 
 function normalize(value: string) {
   return value.replace(/\s+/g, "").toLowerCase();
+}
+
+function compareByTicker(left: SecurityComboboxOption, right: SecurityComboboxOption) {
+  const leftNumber = Number(left.ticker);
+  const rightNumber = Number(right.ticker);
+  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber) && leftNumber !== rightNumber) {
+    return leftNumber - rightNumber;
+  }
+  return left.ticker.localeCompare(right.ticker, "ko", { numeric: true });
 }

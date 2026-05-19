@@ -33,6 +33,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initialLanguage = resolveInitialLanguage();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLanguageState(initialLanguage);
     document.documentElement.lang = initialLanguage;
   }, []);

@@ -54,7 +54,7 @@ export default function TimelineChart({ data }: TimelineChartProps) {
               tickFormatter={formatCompactCurrency}
             />
             <Tooltip
-              formatter={(value: any) => [
+              formatter={(value: unknown) => [
                 formatCurrency(value),
                 t("assets.totalEvaluated"),
               ]}

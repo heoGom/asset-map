@@ -1,81 +1,105 @@
+"use client";
+
 import Link from "next/link";
+import { useLanguage } from "@/lib/language-provider";
 
 export default function Home() {
+  const { t } = useLanguage();
+
+  const workspaces = [
+    {
+      href: "/assets",
+      title: t("home.assetsTitle"),
+      description: t("home.assetsDescription"),
+      meta: t("assets.holdingDetail"),
+    },
+    {
+      href: "/dividends",
+      title: t("home.dividendsTitle"),
+      description: t("home.dividendsDescription"),
+      meta: t("dividends.monthlyStatus"),
+    },
+    {
+      href: "/accounts",
+      title: t("home.accountsTitle"),
+      description: t("home.accountsDescription"),
+      meta: t("accounts.list"),
+    },
+  ];
+
   return (
-    <main className="flex-1 bg-gray-50">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden px-6 pt-24 pb-32">
-        <div className="mx-auto max-w-7xl text-center">
-          <div className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 mb-6">
-            ✨ 새로운 자산 관리의 시작
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <section className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.3fr_0.7fr] lg:items-end lg:py-14">
+          <div>
+            <p className="text-sm font-bold uppercase text-emerald-700 dark:text-emerald-400">
+              Asset Map
+            </p>
+            <h1 className="mt-3 max-w-3xl text-4xl font-black text-gray-950 dark:text-white sm:text-5xl">
+              {t("home.title")}
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-gray-600 dark:text-gray-300">
+              {t("home.subtitle")}
+            </p>
           </div>
-          <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl">
-            자산의 지도를 그리고,<br />
-            <span className="text-emerald-600">미래의 부</span>를 설계하세요.
-          </h1>
-          <p className="mx-auto mt-8 max-w-2xl text-xl leading-8 text-gray-600">
-            흩어져 있는 당신의 계좌와 종목들을 한곳으로 모으세요.<br />
-            정교한 시각화 차트와 배당 예측 시스템이 당신의 투자를 돕습니다.
-          </p>
-          <div className="mt-12 flex items-center justify-center gap-6">
+          <div className="flex flex-wrap gap-3 lg:justify-end">
             <Link
               href="/assets"
-              className="rounded-xl bg-gray-900 px-8 py-4 text-lg font-bold text-white shadow-xl transition-all hover:bg-gray-800 hover:scale-105 active:scale-95"
+              className="rounded-md bg-gray-950 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-950 dark:hover:bg-gray-200"
             >
-              대시보드 시작하기
+              {t("home.primaryAction")}
             </Link>
             <Link
-              href="/assets"
-              className="rounded-xl border border-gray-200 bg-white px-8 py-4 text-lg font-bold text-gray-900 shadow-sm transition-all hover:bg-gray-50"
+              href="/dividends"
+              className="rounded-md border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-50 hover:text-gray-950 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 dark:hover:text-white"
             >
-              기능 둘러보기
+              {t("home.secondaryAction")}
             </Link>
           </div>
         </div>
-
-        {/* Abstract visual element */}
-        <div className="absolute top-1/2 left-1/2 -z-10 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-50 opacity-50 blur-3xl"></div>
       </section>
 
-      {/* Features Section */}
-      <section className="bg-white py-24">
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="grid grid-cols-1 gap-12 md:grid-cols-3">
-            {/* Feature 1 */}
-            <div className="group rounded-3xl border border-gray-100 bg-gray-50 p-8 transition-all hover:border-emerald-100 hover:bg-emerald-50/30">
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm transition-transform group-hover:scale-110">
-                📊
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          {workspaces.map((workspace) => (
+            <Link
+              key={workspace.href}
+              href={workspace.href}
+              className="group rounded-lg border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-emerald-700"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-lg font-bold text-gray-950 dark:text-white">{workspace.title}</h2>
+                <span className="rounded-md bg-gray-100 px-2 py-1 text-xs font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-300">
+                  {workspace.meta}
+                </span>
               </div>
-              <h3 className="text-2xl font-bold">다각도 자산 분석</h3>
-              <p className="mt-4 text-gray-600 leading-relaxed">
-                섹터, 국가, 전략별로 포트폴리오 비중을 시각화하여 특정 자산군에 쏠림이 없는지 한눈에 파악합니다.
+              <p className="mt-4 min-h-14 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                {workspace.description}
               </p>
-            </div>
+              <span className="mt-5 inline-flex text-sm font-bold text-emerald-700 group-hover:text-emerald-800 dark:text-emerald-400">
+                {t("common.details")}
+              </span>
+            </Link>
+          ))}
+        </div>
 
-            {/* Feature 2 */}
-            <div className="group rounded-3xl border border-gray-100 bg-gray-50 p-8 transition-all hover:border-emerald-100 hover:bg-emerald-50/30">
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm transition-transform group-hover:scale-110">
-                💰
-              </div>
-              <h3 className="text-2xl font-bold">배당금 예측 엔진</h3>
-              <p className="mt-4 text-gray-600 leading-relaxed">
-                보유 종목의 배당 일정을 추적하여 미래의 현금 흐름을 월별 달력 형태로 예측하고 관리합니다.
+        <div className="mt-5 rounded-lg border border-dashed border-gray-300 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-base font-bold text-gray-950 dark:text-white">{t("home.operationsTitle")}</h2>
+              <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                {t("home.operationsDescription")}
               </p>
             </div>
-
-            {/* Feature 3 */}
-            <div className="group rounded-3xl border border-gray-100 bg-gray-50 p-8 transition-all hover:border-emerald-100 hover:bg-emerald-50/30">
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm transition-transform group-hover:scale-110">
-                📈
-              </div>
-              <h3 className="text-2xl font-bold">성장 타임라인</h3>
-              <p className="mt-4 text-gray-600 leading-relaxed">
-                주기적인 스냅샷 저장 기능을 통해 내 자산이 시간이 지남에 따라 어떻게 우상향하는지 기록합니다.
-              </p>
-            </div>
+            <Link
+              href="/securities"
+              className="shrink-0 rounded-md border border-gray-200 px-3 py-2 text-sm font-bold text-gray-600 transition hover:bg-gray-50 hover:text-gray-950 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800 dark:hover:text-white"
+            >
+              {t("home.openSecurities")}
+            </Link>
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

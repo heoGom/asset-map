@@ -82,6 +82,7 @@ export default function SecuritiesPage() {
       return;
     }
     const firstSecurity = securities[0];
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setClassificationForm((prev) => ({
       ...prev,
       securityItemId: String(firstSecurity.id),
@@ -98,6 +99,7 @@ export default function SecuritiesPage() {
       return;
     }
     if (existing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setClassificationForm((prev) => ({
         ...prev,
         countryGroup: existing.countryGroup,

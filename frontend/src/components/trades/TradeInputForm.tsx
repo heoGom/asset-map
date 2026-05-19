@@ -65,6 +65,7 @@ export default function TradeInputForm({ onSuccess, initialAccountId, initialSec
   const isSubmitDisabled = mutation.isPending || !hasAccounts || !hasSecurities || !form.accountId || !form.securityItemId;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm((prev) => ({
       ...prev,
       accountId: initialAccountId ? String(initialAccountId) : prev.accountId,

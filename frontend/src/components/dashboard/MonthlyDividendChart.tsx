@@ -54,7 +54,7 @@ export default function MonthlyDividendChart({ data }: MonthlyDividendChartProps
             />
             <Tooltip
               cursor={{ fill: "#f9fafb" }}
-              formatter={(value: any) => [
+              formatter={(value: unknown) => [
                 formatCurrency(value),
                 t("accounts.dividendPayments"),
               ]}

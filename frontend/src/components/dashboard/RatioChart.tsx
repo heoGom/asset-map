@@ -56,7 +56,7 @@ export default function RatioChart({ title, data }: RatioChartProps) {
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: any) => formatCurrency(value)}
+              formatter={(value: unknown) => formatCurrency(value)}
             />
             <Legend verticalAlign="bottom" height={36} />
           </PieChart>
