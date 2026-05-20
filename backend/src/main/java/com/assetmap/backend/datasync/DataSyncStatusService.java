@@ -50,6 +50,13 @@ public class DataSyncStatusService {
 	}
 
 	@Transactional
+	public DataSyncStatusResponse markNoData(DataSyncType syncType, DataSyncSource source, String targetKey, LocalDate checkedDate, String message) {
+		DataSyncStatus status = getOrCreate(syncType, source, targetKey);
+		status.markNoData(checkedDate, LocalDateTime.now(), message);
+		return DataSyncStatusResponse.from(status);
+	}
+
+	@Transactional
 	public DataSyncStatusResponse markSkipped(DataSyncType syncType, DataSyncSource source, String targetKey, String message) {
 		DataSyncStatus status = getOrCreate(syncType, source, targetKey);
 		status.markSkipped(message);
@@ -75,6 +82,12 @@ public class DataSyncStatusService {
 		return repository.findBySyncTypeAndSourceAndTargetKey(syncType, source, targetKey)
 				.map(DataSyncStatus::getLastSuccessDate)
 				.orElse(null);
+	}
+
+	public boolean hasNoDataSync(DataSyncType syncType, DataSyncSource source, String targetKey) {
+		return repository.findBySyncTypeAndSourceAndTargetKey(syncType, source, targetKey)
+				.map(status -> status.getStatus() == DataSyncStatusValue.NO_DATA)
+				.orElse(false);
 	}
 
 	private DataSyncStatus getOrCreate(DataSyncType syncType, DataSyncSource source, String targetKey) {

@@ -8,6 +8,11 @@ import com.assetmap.backend.account.AccountType;
 import com.assetmap.backend.datasync.provider.MarketPriceProvider;
 import com.assetmap.backend.datasync.provider.ImportedMarketPrice;
 import com.assetmap.backend.datasync.provider.ImportedSecurityMaster;
+import com.assetmap.backend.dividend.DividendEventRepository;
+import com.assetmap.backend.dividend.DividendPaymentRepository;
+import com.assetmap.backend.dividend.importer.dto.ImportedDividendEvent;
+import com.assetmap.backend.dividend.importer.dto.StockDividendFetchResult;
+import com.assetmap.backend.dividend.importer.provider.StockDividendProvider;
 import com.assetmap.backend.holding.Holding;
 import com.assetmap.backend.holding.HoldingRepository;
 import com.assetmap.backend.marketprice.MarketDataSource;
@@ -28,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,11 +61,19 @@ class DataSyncInfrastructureTest {
 	private AccountRepository accountRepository;
 	@Autowired
 	private TradeTransactionRepository tradeTransactionRepository;
+	@Autowired
+	private DividendEventRepository dividendEventRepository;
+	@Autowired
+	private DividendPaymentRepository dividendPaymentRepository;
 	@MockitoBean
 	private MarketPriceProvider marketPriceProvider;
+	@MockitoBean
+	private StockDividendProvider stockDividendProvider;
 
 	@BeforeEach
 	void setUp() {
+		dividendPaymentRepository.deleteAll();
+		dividendEventRepository.deleteAll();
 		marketPriceRepository.deleteAll();
 		holdingRepository.deleteAll();
 		tradeTransactionRepository.deleteAll();
@@ -149,6 +163,92 @@ class DataSyncInfrastructureTest {
 		assertThat(holdingRepository.findBySecurityItemId(traded.getId()).get(0).getCurrentPrice()).isEqualByComparingTo("70000");
 		assertThat(holdingRepository.findBySecurityItemId(holdingOnly.getId()).get(0).getCurrentPrice()).isEqualByComparingTo("10");
 		verify(marketPriceProvider).fetchKospiPrices(eq(priceDate), eq(List.of("005930")));
+	}
+
+	@Test
+	void adminMarketPriceSyncStartsFromFirstTradeDateWithoutLookbackCutoff() {
+		LocalDate firstTradeDate = LocalDate.now().minusDays(90);
+		SecurityItem traded = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, traded, firstTradeDate);
+		when(marketPriceProvider.fetchKospiPrices(any(LocalDate.class), eq(List.of("005930"))))
+				.thenAnswer(invocation -> {
+					LocalDate priceDate = invocation.getArgument(0);
+					return List.of(price("005930", priceDate, "70000"));
+				});
+
+		AdminSyncResponse response = adminSyncService.syncMarketPrices(new AdminSyncRequest(false, null, null, null, null));
+
+		assertThat(response.status()).isEqualTo("SUCCESS");
+		assertThat(response.basDd()).startsWith(firstTradeDate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE));
+		assertThat(marketPriceRepository.existsBySecurityItemIdAndPriceDateAndSource(traded.getId(), firstTradeDate, MarketDataSource.KRX)).isTrue();
+	}
+
+	@Test
+	void adminMarketPriceSyncRetriesDateWhenOnlySomeTargetSecuritiesExistEvenIfStatusSucceeded() {
+		LocalDate priceDate = LocalDate.of(2026, 5, 15);
+		SecurityItem existing = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		SecurityItem missing = securityItemRepository.save(new SecurityItem("000660", "SK하이닉스", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, existing, priceDate.minusDays(1));
+		addTrade(account, missing, priceDate.minusDays(1));
+		marketPriceSyncService.upsertImportedPrices(List.of(price("005930", priceDate, "70000")));
+		dataSyncStatusService.markSuccess(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, "TRADED_SECURITIES_20260515", priceDate, "partial old success");
+		when(marketPriceProvider.fetchKospiPrices(eq(priceDate), eq(List.of("000660"))))
+				.thenReturn(List.of(price("000660", priceDate, "120000")));
+
+		AdminSyncResponse response = adminSyncService.syncMarketPrices(new AdminSyncRequest(false, priceDate, null, null, null));
+
+		assertThat(response.status()).isEqualTo("SUCCESS");
+		assertThat(marketPriceRepository.existsBySecurityItemIdAndPriceDateAndSource(existing.getId(), priceDate, MarketDataSource.KRX)).isTrue();
+		assertThat(marketPriceRepository.existsBySecurityItemIdAndPriceDateAndSource(missing.getId(), priceDate, MarketDataSource.KRX)).isTrue();
+		verify(marketPriceProvider).fetchKospiPrices(eq(priceDate), eq(List.of("000660")));
+	}
+
+	@Test
+	void adminStockDividendSyncDoesNotSkipOnlyBecauseTodayAlreadySucceeded() {
+		LocalDate recordDate = LocalDate.of(2020, 12, 31);
+		SecurityItem security = securityItemRepository.save(new SecurityItem("002020", "코오롱", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, security, LocalDate.of(2020, 1, 2));
+		dataSyncStatusService.markSuccess(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, "TRADED_STOCK_SECURITIES", LocalDate.now(), "old success");
+		when(stockDividendProvider.fetch("코오롱"))
+				.thenReturn(new StockDividendFetchResult("코오롱", 200, "00", "NORMAL_SERVICE", 1, List.of(
+						new ImportedDividendEvent(
+								"코오롱",
+								"KR7002020000",
+								"코오롱",
+								"코오롱",
+								"보통주",
+								"현금배당",
+								recordDate,
+								LocalDate.of(2021, 4, 16),
+								new BigDecimal("1200")
+						)
+				)));
+
+		AdminSyncResponse response = adminSyncService.syncStockDividends(new AdminSyncRequest(false, null, null, null, null));
+
+		assertThat(response.status()).isEqualTo("SUCCESS");
+		assertThat(dividendEventRepository.findBySecurityItemId(security.getId())).hasSize(1);
+		assertThat(dividendPaymentRepository.findByUserId(1L)).hasSize(1);
+	}
+
+	private void addTrade(Account account, SecurityItem securityItem, LocalDate tradeDate) {
+		tradeTransactionRepository.save(new TradeTransaction(
+				1L,
+				account,
+				securityItem,
+				tradeDate,
+				TradeType.BUY,
+				BigDecimal.ONE,
+				BigDecimal.TEN,
+				BigDecimal.ZERO,
+				BigDecimal.ZERO,
+				"KRW",
+				TransactionSource.MANUAL,
+				null
+		));
 	}
 
 	private ImportedMarketPrice price(String ticker, LocalDate priceDate, String currentPrice) {

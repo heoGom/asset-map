@@ -118,8 +118,8 @@ com.assetmap.backend
 - 종목 마스터는 전체 수집 대상으로 보고 `ticker` 기준으로 `SecurityItem`을 upsert합니다. KRX `ISU_CD`는 `isinCode`에 저장합니다.
 - 시세 대상은 `Holding`이 아니라 `TradeTransaction`에 한 번이라도 등장한 `STOCK`/`ETF` 종목입니다. 현재 보유하지 않더라도 과거 거래 종목이면 backfill 대상에 포함됩니다.
 - KRX 시세 API는 `basDd` 기준 전체 시장 응답을 내려주지만, 저장은 거래내역 대상 ticker만 수행합니다. 중복 기준은 `securityItemId + priceDate + source`이며, 최신 가격이면 `Holding.currentPrice`를 갱신합니다.
-- 시세 backfill은 대상 종목의 KRX `MarketPrice` 최대 `priceDate` 다음 날부터 오늘까지 시도합니다. 데이터가 없으면 최근 `app.sync.market-prices.default-lookback-days`만 확인하고, 한 번에 최대 `app.sync.market-prices.max-backfill-days`까지만 시도합니다. 날짜별 상태는 `TRADED_SECURITIES_YYYYMMDD`, 전체 상태는 `TRADED_SECURITIES`로 기록합니다.
-- 배당 API는 `TradeTransaction`에 등장한 국내 `STOCK` 종목만 대상으로 합니다. 처음 실행하거나 이벤트가 없으면 2020년부터 현재 연도까지 가져오고, 이후에는 최근 `app.sync.stock-dividends.recheck-years` 연도를 재확인합니다. 전체 상태는 `STOCK_DIVIDEND`/`PUBLIC_DATA_STOCK_DIVIDEND`/`TRADED_STOCK_SECURITIES`로 기록합니다.
+- 시세 backfill은 `TradeTransaction`에 등장한 각 `STOCK`/`ETF` 종목의 최초 거래일부터 오늘까지 실제 KRX `MarketPrice` 존재 여부를 종목별/날짜별로 확인합니다. `DataSyncStatus` 성공 기록만으로 skip하지 않고, 특정 날짜에 일부 종목만 저장되어 있으면 누락 종목만 재시도합니다. `app.sync.market-prices.max-backfill-days`는 전체 대상 기간 제한이 아니라 1회 실행에서 처리할 날짜 chunk 크기로만 사용합니다.
+- 배당 API는 `TradeTransaction`에 등장한 국내 `STOCK` 종목만 대상으로 합니다. 오늘 성공 기록만으로 skip하지 않고, 종목별 최초 거래연도와 `DividendEvent` 실제 존재 여부를 함께 확인해 과거 누락분이 있으면 기본 시작연도부터 현재 연도까지 다시 확인합니다. 과거 구간이 채워져 있으면 최근 `app.sync.stock-dividends.recheck-years` 연도를 재확인합니다. ETF 분배금은 자동 대상이 아니며 수동 입력을 유지합니다.
 - 배당 이벤트 저장 후 거래 사용자별 `DividendPayment` 생성을 재시도합니다. 이미 이벤트나 payment가 있으면 중복 저장하지 않습니다.
 - ETF 분배금은 자동 API 대상이 아니며 수동 입력을 유지합니다.
 

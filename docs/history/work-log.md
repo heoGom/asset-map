@@ -229,3 +229,10 @@
 - light/dark와 KO/EN 전환을 단일 액션 버튼 대신 현재 상태가 보이는 segmented toggle 형태로 바꿨다.
 - 홈 화면을 마케팅 랜딩 페이지에서 자산/배당/계좌 작업으로 바로 진입하는 앱 허브 화면으로 재구성했다.
 - Footer를 더 낮은 시각 우선순위의 compact app footer로 정리했다.
+
+### 외부 데이터 sync P0 정합성 보강
+
+- 시세 sync의 30일/60일 대상 기간 제한을 제거하고, `TradeTransaction` 종목별 최초 거래일부터 실제 KRX `MarketPrice` 누락 여부를 날짜별로 확인하도록 변경했다.
+- `DataSyncStatus` 날짜 성공 기록이 있더라도 해당 날짜의 일부 종목 시세가 비어 있으면 누락 종목만 다시 가져오도록 했다.
+- 배당 sync는 오늘 성공 기록만으로 skip하지 않고, 국내 `STOCK` 거래 종목의 최초 거래연도와 `DividendEvent` 실제 데이터를 함께 보고 과거 누락분을 복구할 수 있게 했다.
+- `MarketPrice`, `DividendEvent`, `DividendPayment`에 자연키 기준 unique constraint를 추가해 재시도/동시 실행 시 중복 저장을 DB 레벨에서도 방어한다.

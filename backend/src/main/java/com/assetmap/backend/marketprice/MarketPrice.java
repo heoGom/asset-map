@@ -12,11 +12,20 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(
+		name = "market_price",
+		uniqueConstraints = @UniqueConstraint(
+				name = "uk_market_price_security_date_source",
+				columnNames = {"security_item_id", "price_date", "source"}
+		)
+)
 public class MarketPrice extends BaseEntity {
 
 	@Id

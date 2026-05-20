@@ -72,6 +72,13 @@ public class DataSyncStatus extends BaseEntity {
 		this.message = message;
 	}
 
+	public void markNoData(LocalDate successDate, LocalDateTime successAt, String message) {
+		this.lastSuccessDate = successDate;
+		this.lastSuccessAt = successAt;
+		this.status = DataSyncStatusValue.NO_DATA;
+		this.message = message;
+	}
+
 	public void markSkipped(String message) {
 		if (this.lastSuccessDate == null) {
 			this.status = DataSyncStatusValue.SKIPPED;

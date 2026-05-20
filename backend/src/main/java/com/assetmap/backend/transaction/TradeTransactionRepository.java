@@ -27,6 +27,9 @@ public interface TradeTransactionRepository extends JpaRepository<TradeTransacti
 	@Query("select distinct t.securityItem from TradeTransaction t where t.securityItem.securityType in :securityTypes")
 	List<SecurityItem> findDistinctSecurityItemsBySecurityTypes(@Param("securityTypes") List<SecurityType> securityTypes);
 
+	@Query("select t.securityItem.id as securityItemId, min(t.tradeDate) as firstTradeDate from TradeTransaction t where t.securityItem.securityType in :securityTypes group by t.securityItem.id")
+	List<SecurityTradeStartProjection> findFirstTradeDateBySecurityTypes(@Param("securityTypes") List<SecurityType> securityTypes);
+
 	@Query("select distinct t.securityItem from TradeTransaction t where t.userId = :userId and t.securityItem.securityType in :securityTypes")
 	List<SecurityItem> findDistinctSecurityItemsByUserIdAndSecurityTypes(@Param("userId") Long userId, @Param("securityTypes") List<SecurityType> securityTypes);
 

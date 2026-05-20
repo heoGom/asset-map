@@ -4,5 +4,6 @@ public enum DataSyncStatusValue {
 	SUCCESS,
 	FAILED,
 	RUNNING,
-	SKIPPED
+	SKIPPED,
+	NO_DATA
 }

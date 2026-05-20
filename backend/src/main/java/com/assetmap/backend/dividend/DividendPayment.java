@@ -13,10 +13,19 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
+@Table(
+		name = "dividend_payment",
+		uniqueConstraints = @UniqueConstraint(
+				name = "uk_dividend_payment_user_account_security_event",
+				columnNames = {"user_id", "account_id", "security_item_id", "dividend_event_id"}
+		)
+)
 public class DividendPayment extends BaseEntity {
 
 	@Id

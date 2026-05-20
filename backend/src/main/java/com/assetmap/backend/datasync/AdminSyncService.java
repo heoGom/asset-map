@@ -15,12 +15,18 @@ import com.assetmap.backend.marketprice.MarketPriceRepository;
 import com.assetmap.backend.securityitem.SecurityItem;
 import com.assetmap.backend.securityitem.SecurityItemRepository;
 import com.assetmap.backend.securityitem.SecurityType;
+import com.assetmap.backend.transaction.SecurityTradeStartProjection;
 import com.assetmap.backend.transaction.TradeTransactionRepository;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -145,35 +151,36 @@ public class AdminSyncService {
 			return response("SKIPPED", DataSyncType.MARKET_PRICE, DataSyncSource.KRX, TRADED_SECURITIES, "", 0, 0, 0, 0, SyncUpsertResult.empty(), 0, "No traded STOCK/ETF securities.", status);
 		}
 
-		DateRange range = resolveMarketPriceRange(request, targetSecurities);
-		if (range.isEmpty()) {
+		List<MarketPriceDateTarget> dateTargets = resolveMarketPriceDateTargets(request, targetSecurities);
+		if (dateTargets.isEmpty()) {
 			String message = "KRX market price sync skipped. Already up to date.";
 			DataSyncStatusResponse status = dataSyncStatusService.markSkipped(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, TRADED_SECURITIES, message);
 			return response("SKIPPED", DataSyncType.MARKET_PRICE, DataSyncSource.KRX, TRADED_SECURITIES, "", 0, 0, targetSecurities.size(), 0, SyncUpsertResult.empty(), 0, message, status);
 		}
+		LocalDate rangeStart = dateTargets.get(0).priceDate();
+		LocalDate rangeEnd = dateTargets.get(dateTargets.size() - 1).priceDate();
 
 		dataSyncStatusService.markRunning(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, TRADED_SECURITIES,
-				"KRX market price backfill started. from=%s to=%s target=%d".formatted(range.start(), range.end(), targetSecurities.size()));
+				"KRX market price backfill started. from=%s to=%s target=%d chunkDates=%d".formatted(rangeStart, rangeEnd, targetSecurities.size(), dateTargets.size()));
 
 		SyncUpsertResult total = SyncUpsertResult.empty();
 		int importedPriceCount = 0;
 		int failedCount = 0;
 		LocalDate latestSuccessDate = null;
-		for (LocalDate priceDate = range.start(); !priceDate.isAfter(range.end()); priceDate = priceDate.plusDays(1)) {
+		for (MarketPriceDateTarget dateTarget : dateTargets) {
+			LocalDate priceDate = dateTarget.priceDate();
 			String dateTargetKey = TRADED_SECURITIES + "_" + priceDate.format(COMPACT_DATE);
-			if (!force && dataSyncStatusService.hasSuccessfulSync(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey)) {
-				dataSyncStatusService.markSkipped(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey, "Already synced for target date.");
-				continue;
-			}
-			dataSyncStatusService.markRunning(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey, "KRX market price sync started. basDd=" + priceDate.format(COMPACT_DATE));
+			dataSyncStatusService.markRunning(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey,
+					"KRX market price sync started. basDd=%s target=%d".formatted(priceDate.format(COMPACT_DATE), dateTarget.targetSecurities().size()));
 			try {
-				List<ImportedMarketPrice> imported = fetchMarketPrices(priceDate, targetSecurities);
-				SyncUpsertResult result = marketPriceSyncService.upsertImportedPrices(imported, targetSecurities);
+				List<ImportedMarketPrice> imported = fetchMarketPrices(priceDate, dateTarget.targetSecurities());
+				SyncUpsertResult result = marketPriceSyncService.upsertImportedPrices(imported, dateTarget.targetSecurities());
 				total = total.plus(result);
 				int changedCount = result.insertedCount() + result.updatedCount();
 				importedPriceCount += changedCount;
 				if (changedCount == 0) {
-					dataSyncStatusService.markSkipped(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey, "NO_DATA: no target market prices for date.");
+					dataSyncStatusService.markNoData(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey, priceDate,
+							"NO_DATA: no target market prices for date. target=%d".formatted(dateTarget.targetSecurities().size()));
 					continue;
 				}
 				latestSuccessDate = priceDate;
@@ -188,8 +195,8 @@ public class AdminSyncService {
 			}
 		}
 
-		String message = "KRX market price backfill completed. from=%s to=%s target=%d imported=%d skipped=%d failed=%d"
-				.formatted(range.start(), range.end(), targetSecurities.size(), importedPriceCount, total.skippedCount(), failedCount);
+		String message = "KRX market price backfill completed. from=%s to=%s target=%d chunkDates=%d imported=%d skipped=%d failed=%d"
+				.formatted(rangeStart, rangeEnd, targetSecurities.size(), dateTargets.size(), importedPriceCount, total.skippedCount(), failedCount);
 		DataSyncStatusResponse status;
 		String statusText;
 		if (failedCount > 0 && importedPriceCount == 0) {
@@ -203,22 +210,20 @@ public class AdminSyncService {
 			statusText = failedCount > 0 ? "FAILED" : "SKIPPED";
 		}
 		return response(statusText, DataSyncType.MARKET_PRICE, DataSyncSource.KRX, TRADED_SECURITIES,
-				range.start().format(COMPACT_DATE) + ".." + range.end().format(COMPACT_DATE),
+				rangeStart.format(COMPACT_DATE) + ".." + rangeEnd.format(COMPACT_DATE),
 				0, 0, targetSecurities.size(), importedPriceCount, total, failedCount, message, status);
 	}
 
 	@Transactional
 	public AdminSyncResponse syncStockDividends(AdminSyncRequest request) {
 		boolean force = force(request);
-		List<SecurityItem> targetSecurities = tradeTransactionRepository.findDistinctSecurityItemsBySecurityTypes(List.of(SecurityType.STOCK));
+		List<SecurityItem> targetSecurities = tradeTransactionRepository.findDistinctSecurityItemsBySecurityTypes(List.of(SecurityType.STOCK))
+				.stream()
+				.filter(this::isDomesticKrwStock)
+				.toList();
 		if (targetSecurities.isEmpty()) {
 			DataSyncStatusResponse status = dataSyncStatusService.markSkipped(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES, "No traded STOCK securities.");
 			return response("SKIPPED", DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES, "", 0, 0, 0, 0, SyncUpsertResult.empty(), 0, "No traded STOCK securities.", status);
-		}
-		if (!force && LocalDate.now().equals(dataSyncStatusService.lastSuccessDate(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES))) {
-			String message = "Stock dividend sync skipped. Already synced today.";
-			DataSyncStatusResponse status = dataSyncStatusService.markSkipped(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES, message);
-			return response("SKIPPED", DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES, "", 0, 0, targetSecurities.size(), 0, SyncUpsertResult.empty(), 0, message, status);
 		}
 
 		YearRange range = resolveStockDividendRange(request, force, targetSecurities);
@@ -272,29 +277,42 @@ public class AdminSyncService {
 		return imported;
 	}
 
-	private DateRange resolveMarketPriceRange(AdminSyncRequest request, List<SecurityItem> targetSecurities) {
+	private List<MarketPriceDateTarget> resolveMarketPriceDateTargets(AdminSyncRequest request, List<SecurityItem> targetSecurities) {
 		LocalDate explicitDate = resolveExplicitMarketPriceDate(request);
+		Map<Long, LocalDate> firstTradeDateBySecurityId = firstTradeDateBySecurityId(List.of(SecurityType.STOCK, SecurityType.ETF));
 		if (explicitDate != null) {
-			return new DateRange(explicitDate, explicitDate);
+			List<SecurityItem> missingTargets = missingMarketPriceTargets(explicitDate, targetSecurities, firstTradeDateBySecurityId, force(request));
+			return missingTargets.isEmpty() ? List.of() : List.of(new MarketPriceDateTarget(explicitDate, missingTargets));
 		}
 		LocalDate end = LocalDate.now();
 		if (request != null && request.basDd() != null) {
 			end = request.basDd();
 		}
+		LocalDate syncEnd = end;
+		LocalDate start = targetSecurities.stream()
+				.map(SecurityItem::getId)
+				.map(firstTradeDateBySecurityId::get)
+				.filter(date -> date != null && !date.isAfter(syncEnd))
+				.min(Comparator.naturalOrder())
+				.orElse(syncEnd.plusDays(1));
+		if (start.isAfter(syncEnd)) {
+			return List.of();
+		}
 		boolean force = force(request);
-		List<Long> targetIds = targetSecurities.stream().map(SecurityItem::getId).toList();
-		LocalDate latestPriceDate = marketPriceRepository.findMaxPriceDateBySourceAndSecurityItemIds(MarketDataSource.KRX, targetIds).orElse(null);
-		LocalDate start;
-		if (force || latestPriceDate == null) {
-			start = end.minusDays(Math.max(1, marketPriceDefaultLookbackDays) - 1L);
-		} else {
-			start = latestPriceDate.plusDays(1);
+		int configuredChunkDays = marketPriceMaxBackfillDays > 0 ? marketPriceMaxBackfillDays : marketPriceDefaultLookbackDays;
+		int maxDatesPerRun = Math.max(1, configuredChunkDays);
+		List<MarketPriceDateTarget> dateTargets = new ArrayList<>();
+		for (LocalDate priceDate = start; !priceDate.isAfter(syncEnd); priceDate = priceDate.plusDays(1)) {
+			List<SecurityItem> missingTargets = missingMarketPriceTargets(priceDate, targetSecurities, firstTradeDateBySecurityId, force);
+			if (missingTargets.isEmpty()) {
+				continue;
+			}
+			dateTargets.add(new MarketPriceDateTarget(priceDate, missingTargets));
+			if (dateTargets.size() >= maxDatesPerRun) {
+				break;
+			}
 		}
-		LocalDate earliestAllowed = end.minusDays(Math.max(1, marketPriceMaxBackfillDays) - 1L);
-		if (start.isBefore(earliestAllowed)) {
-			start = earliestAllowed;
-		}
-		return new DateRange(start, end);
+		return dateTargets;
 	}
 
 	private YearRange resolveStockDividendRange(AdminSyncRequest request, boolean force, List<SecurityItem> targetSecurities) {
@@ -306,13 +324,98 @@ public class AdminSyncService {
 			return new YearRange(request != null && request.fromYear() != null ? request.fromYear() : stockDividendDefaultFromYear,
 					request != null && request.toYear() != null ? request.toYear() : currentYear);
 		}
-		List<Long> targetIds = targetSecurities.stream().map(SecurityItem::getId).toList();
-		long importedEventCount = dividendEventRepository.countBySourceAndSecurityItemIds(DataSourceType.PUBLIC_DATA_STOCK_DIVIDEND, targetIds);
-		if (importedEventCount == 0 || !dataSyncStatusService.hasSuccessfulSync(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES)) {
-			return new YearRange(stockDividendDefaultFromYear, currentYear);
-		}
-		int fromYear = Math.max(stockDividendDefaultFromYear, currentYear - Math.max(1, stockDividendRecheckYears) + 1);
+		Map<Long, LocalDate> firstTradeDateBySecurityId = firstTradeDateBySecurityId(List.of(SecurityType.STOCK));
+		int earliestNeededYear = targetSecurities.stream()
+				.map(SecurityItem::getId)
+				.map(firstTradeDateBySecurityId::get)
+				.filter(date -> date != null)
+				.mapToInt(LocalDate::getYear)
+				.min()
+				.orElse(stockDividendDefaultFromYear);
+		int fullFromYear = Math.max(stockDividendDefaultFromYear, earliestNeededYear);
+		int recheckFromYear = Math.max(fullFromYear, currentYear - Math.max(1, stockDividendRecheckYears) + 1);
+		int fromYear = hasHistoricalDividendGap(targetSecurities, firstTradeDateBySecurityId, fullFromYear, recheckFromYear - 1)
+				? fullFromYear
+				: recheckFromYear;
 		return new YearRange(fromYear, currentYear);
+	}
+
+	private List<SecurityItem> missingMarketPriceTargets(
+			LocalDate priceDate,
+			List<SecurityItem> targetSecurities,
+			Map<Long, LocalDate> firstTradeDateBySecurityId,
+			boolean force
+	) {
+		List<SecurityItem> eligibleTargets = targetSecurities.stream()
+				.filter(security -> {
+					LocalDate firstTradeDate = firstTradeDateBySecurityId.get(security.getId());
+					return firstTradeDate != null && !firstTradeDate.isAfter(priceDate);
+				})
+				.toList();
+		if (eligibleTargets.isEmpty()) {
+			return List.of();
+		}
+		if (force) {
+			return eligibleTargets;
+		}
+		List<Long> eligibleIds = eligibleTargets.stream().map(SecurityItem::getId).toList();
+		Set<Long> existingIds = new HashSet<>(marketPriceRepository.findSecurityItemIdsWithPrice(MarketDataSource.KRX, priceDate, eligibleIds));
+		if (existingIds.containsAll(eligibleIds)) {
+			return List.of();
+		}
+		String dateTargetKey = TRADED_SECURITIES + "_" + priceDate.format(COMPACT_DATE);
+		if (existingIds.isEmpty() && dataSyncStatusService.hasNoDataSync(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey)) {
+			return List.of();
+		}
+		return eligibleTargets.stream()
+				.filter(security -> !existingIds.contains(security.getId()))
+				.toList();
+	}
+
+	private Map<Long, LocalDate> firstTradeDateBySecurityId(List<SecurityType> securityTypes) {
+		Map<Long, LocalDate> firstTradeDateBySecurityId = new HashMap<>();
+		for (SecurityTradeStartProjection projection : tradeTransactionRepository.findFirstTradeDateBySecurityTypes(securityTypes)) {
+			firstTradeDateBySecurityId.put(projection.getSecurityItemId(), projection.getFirstTradeDate());
+		}
+		return firstTradeDateBySecurityId;
+	}
+
+	private boolean hasHistoricalDividendGap(
+			List<SecurityItem> targetSecurities,
+			Map<Long, LocalDate> firstTradeDateBySecurityId,
+			int defaultFromYear,
+			int stableToYear
+	) {
+		if (stableToYear < defaultFromYear) {
+			return false;
+		}
+		for (SecurityItem securityItem : targetSecurities) {
+			LocalDate firstTradeDate = firstTradeDateBySecurityId.get(securityItem.getId());
+			if (firstTradeDate == null) {
+				continue;
+			}
+			int fromYear = Math.max(defaultFromYear, firstTradeDate.getYear());
+			if (fromYear > stableToYear) {
+				continue;
+			}
+			Set<Integer> yearsWithEvents = new HashSet<>();
+			for (Object[] row : dividendEventRepository.countByDividendYear(
+					DataSourceType.PUBLIC_DATA_STOCK_DIVIDEND,
+					securityItem.getId(),
+					fromYear,
+					stableToYear
+			)) {
+				if (row[0] instanceof Number year && row[1] instanceof Number count && count.longValue() > 0) {
+					yearsWithEvents.add(year.intValue());
+				}
+			}
+			for (int year = fromYear; year <= stableToYear; year++) {
+				if (!yearsWithEvents.contains(year)) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	private AdminSyncResponse response(
@@ -379,6 +482,20 @@ public class AdminSyncService {
 				.toList();
 	}
 
+	private boolean isDomesticKrwStock(SecurityItem securityItem) {
+		if (securityItem.getSecurityType() != SecurityType.STOCK) {
+			return false;
+		}
+		if (!"KRW".equalsIgnoreCase(securityItem.getCurrency())) {
+			return false;
+		}
+		if (!StringUtils.hasText(securityItem.getCountry())) {
+			return true;
+		}
+		String country = securityItem.getCountry().replaceAll("[\\s\\-_/().]", "").toUpperCase();
+		return country.equals("KR") || country.equals("KOREA") || country.equals("SOUTHKOREA") || country.equals("대한민국");
+	}
+
 	private LocalDate parseConfiguredDate(String value) {
 		String trimmed = value.trim();
 		try {
@@ -395,10 +512,7 @@ public class AdminSyncService {
 		return request != null && request.forceOrFalse();
 	}
 
-	private record DateRange(LocalDate start, LocalDate end) {
-		private boolean isEmpty() {
-			return start.isAfter(end);
-		}
+	private record MarketPriceDateTarget(LocalDate priceDate, List<SecurityItem> targetSecurities) {
 	}
 
 	private record YearRange(int fromYear, int toYear) {
