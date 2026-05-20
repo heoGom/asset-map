@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.assetmap.backend.account.Account;
 import com.assetmap.backend.account.AccountRepository;
 import com.assetmap.backend.account.AccountType;
+import com.assetmap.backend.common.exception.BusinessException;
+import com.assetmap.backend.common.exception.ErrorCode;
 import com.assetmap.backend.datasync.provider.MarketPriceProvider;
 import com.assetmap.backend.datasync.provider.ImportedMarketPrice;
 import com.assetmap.backend.datasync.provider.ImportedSecurityMaster;
@@ -26,15 +28,18 @@ import com.assetmap.backend.transaction.TradeType;
 import com.assetmap.backend.transaction.TransactionSource;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -206,6 +211,74 @@ class DataSyncInfrastructureTest {
 	}
 
 	@Test
+	void marketPriceNoDataSkipsUntilRecheckTtlExpires() {
+		LocalDate priceDate = LocalDate.of(2026, 5, 15);
+		SecurityItem traded = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, traded, priceDate.minusDays(1));
+		String targetKey = "TRADED_SECURITIES_20260515";
+		dataSyncStatusService.markNoData(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, targetKey, priceDate, "fresh no data");
+
+		AdminSyncResponse skipped = adminSyncService.syncMarketPrices(new AdminSyncRequest(false, priceDate, null, null, null));
+
+		assertThat(skipped.status()).isEqualTo("SKIPPED");
+		verify(marketPriceProvider, never()).fetchKospiPrices(eq(priceDate), eq(List.of("005930")));
+
+		DataSyncStatus status = dataSyncStatusRepository.findBySyncTypeAndSourceAndTargetKey(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, targetKey).orElseThrow();
+		ReflectionTestUtils.setField(status, "lastSuccessAt", LocalDateTime.now().minusDays(8));
+		dataSyncStatusRepository.saveAndFlush(status);
+		when(marketPriceProvider.fetchKospiPrices(eq(priceDate), eq(List.of("005930"))))
+				.thenReturn(List.of(price("005930", priceDate, "70000")));
+
+		AdminSyncResponse retried = adminSyncService.syncMarketPrices(new AdminSyncRequest(false, priceDate, null, null, null));
+
+		assertThat(retried.status()).isEqualTo("SUCCESS");
+		assertThat(marketPriceRepository.existsBySecurityItemIdAndPriceDateAndSource(traded.getId(), priceDate, MarketDataSource.KRX)).isTrue();
+		verify(marketPriceProvider).fetchKospiPrices(eq(priceDate), eq(List.of("005930")));
+	}
+
+	@Test
+	void marketPriceApiFailureIsRecordedAsFailedNotNoData() {
+		LocalDate priceDate = LocalDate.of(2026, 5, 15);
+		SecurityItem traded = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, traded, priceDate.minusDays(1));
+		when(marketPriceProvider.fetchKospiPrices(eq(priceDate), eq(List.of("005930"))))
+				.thenThrow(new BusinessException(ErrorCode.API_RESPONSE_ERROR, "KRX failure"));
+
+		AdminSyncResponse response = adminSyncService.syncMarketPrices(new AdminSyncRequest(false, priceDate, null, null, null));
+
+		assertThat(response.status()).isEqualTo("FAILED");
+		DataSyncStatus status = dataSyncStatusRepository.findBySyncTypeAndSourceAndTargetKey(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, "TRADED_SECURITIES_20260515").orElseThrow();
+		assertThat(status.getStatus()).isEqualTo(DataSyncStatusValue.FAILED);
+	}
+
+	@Test
+	void marketPricePartialDateFailureKeepsPreviouslyCommittedDate() {
+		LocalDate firstDate = LocalDate.now().minusDays(1);
+		LocalDate secondDate = LocalDate.now();
+		SecurityItem traded = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, traded, firstDate);
+		when(marketPriceProvider.fetchKospiPrices(eq(firstDate), eq(List.of("005930"))))
+				.thenReturn(List.of(price("005930", firstDate, "70000")));
+		when(marketPriceProvider.fetchKospiPrices(eq(secondDate), eq(List.of("005930"))))
+				.thenThrow(new BusinessException(ErrorCode.API_RESPONSE_ERROR, "KRX failure"));
+
+		AdminSyncResponse response = adminSyncService.syncMarketPrices(new AdminSyncRequest(false, null, null, null, null));
+
+		assertThat(response.status()).isEqualTo("SUCCESS");
+		assertThat(response.failedCount()).isEqualTo(1);
+		assertThat(marketPriceRepository.existsBySecurityItemIdAndPriceDateAndSource(traded.getId(), firstDate, MarketDataSource.KRX)).isTrue();
+		DataSyncStatus failedStatus = dataSyncStatusRepository.findBySyncTypeAndSourceAndTargetKey(
+				DataSyncType.MARKET_PRICE,
+				DataSyncSource.KRX,
+				"TRADED_SECURITIES_" + secondDate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)
+		).orElseThrow();
+		assertThat(failedStatus.getStatus()).isEqualTo(DataSyncStatusValue.FAILED);
+	}
+
+	@Test
 	void adminStockDividendSyncDoesNotSkipOnlyBecauseTodayAlreadySucceeded() {
 		LocalDate recordDate = LocalDate.of(2020, 12, 31);
 		SecurityItem security = securityItemRepository.save(new SecurityItem("002020", "코오롱", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
@@ -232,6 +305,91 @@ class DataSyncInfrastructureTest {
 		assertThat(response.status()).isEqualTo("SUCCESS");
 		assertThat(dividendEventRepository.findBySecurityItemId(security.getId())).hasSize(1);
 		assertThat(dividendPaymentRepository.findByUserId(1L)).hasSize(1);
+	}
+
+	@Test
+	void stockDividendNoDataSkipsUntilRecheckTtlExpires() {
+		int year = 2020;
+		SecurityItem security = securityItemRepository.save(new SecurityItem("002020", "코오롱", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, security, LocalDate.of(year, 1, 2));
+		String targetKey = ExternalDataSyncCheckpointService.stockDividendTargetKey(security, year);
+		dataSyncStatusService.markNoData(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, targetKey, LocalDate.of(year, 12, 31), "fresh no data");
+
+		AdminSyncResponse skipped = adminSyncService.syncStockDividends(new AdminSyncRequest(false, null, null, year, year));
+
+		assertThat(skipped.status()).isEqualTo("SKIPPED");
+		verify(stockDividendProvider, never()).fetch("코오롱");
+
+		DataSyncStatus status = dataSyncStatusRepository.findBySyncTypeAndSourceAndTargetKey(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, targetKey).orElseThrow();
+		ReflectionTestUtils.setField(status, "lastSuccessAt", LocalDateTime.now().minusDays(8));
+		dataSyncStatusRepository.saveAndFlush(status);
+		when(stockDividendProvider.fetch("코오롱"))
+				.thenReturn(new StockDividendFetchResult("코오롱", 200, "00", "NORMAL_SERVICE", 0, List.of()));
+
+		AdminSyncResponse retried = adminSyncService.syncStockDividends(new AdminSyncRequest(false, null, null, year, year));
+
+		assertThat(retried.status()).isEqualTo("SUCCESS");
+		verify(stockDividendProvider).fetch("코오롱");
+	}
+
+	@Test
+	void stockDividendApiFailureIsRecordedAsFailedNotNoData() {
+		int year = 2020;
+		SecurityItem security = securityItemRepository.save(new SecurityItem("002020", "코오롱", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, security, LocalDate.of(year, 1, 2));
+		when(stockDividendProvider.fetch("코오롱"))
+				.thenReturn(new StockDividendFetchResult("코오롱", 200, "99", "SERVICE_ERROR", 0, List.of()));
+
+		AdminSyncResponse response = adminSyncService.syncStockDividends(new AdminSyncRequest(false, null, null, year, year));
+
+		assertThat(response.status()).isEqualTo("FAILED");
+		DataSyncStatus status = dataSyncStatusRepository.findBySyncTypeAndSourceAndTargetKey(
+				DataSyncType.STOCK_DIVIDEND,
+				DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND,
+				ExternalDataSyncCheckpointService.stockDividendTargetKey(security, year)
+		).orElseThrow();
+		assertThat(status.getStatus()).isEqualTo(DataSyncStatusValue.FAILED);
+	}
+
+	@Test
+	void stockDividendPartialSecurityYearFailureKeepsOtherSecurityYearSuccess() {
+		int year = 2020;
+		LocalDate recordDate = LocalDate.of(year, 12, 31);
+		SecurityItem successSecurity = securityItemRepository.save(new SecurityItem("002020", "코오롱", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		SecurityItem failedSecurity = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, successSecurity, LocalDate.of(year, 1, 2));
+		addTrade(account, failedSecurity, LocalDate.of(year, 1, 2));
+		when(stockDividendProvider.fetch("코오롱"))
+				.thenReturn(new StockDividendFetchResult("코오롱", 200, "00", "NORMAL_SERVICE", 1, List.of(
+						new ImportedDividendEvent(
+								"코오롱",
+								"KR7002020000",
+								"코오롱",
+								"코오롱",
+								"보통주",
+								"현금배당",
+								recordDate,
+								LocalDate.of(2021, 4, 16),
+								new BigDecimal("1200")
+						)
+				)));
+		when(stockDividendProvider.fetch("삼성전자"))
+				.thenThrow(new BusinessException(ErrorCode.API_RESPONSE_ERROR, "public data failure"));
+
+		AdminSyncResponse response = adminSyncService.syncStockDividends(new AdminSyncRequest(false, null, null, year, year));
+
+		assertThat(response.status()).isEqualTo("PARTIAL_SUCCESS");
+		assertThat(response.failedCount()).isEqualTo(1);
+		assertThat(dividendEventRepository.findBySecurityItemId(successSecurity.getId())).hasSize(1);
+		DataSyncStatus failedStatus = dataSyncStatusRepository.findBySyncTypeAndSourceAndTargetKey(
+				DataSyncType.STOCK_DIVIDEND,
+				DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND,
+				ExternalDataSyncCheckpointService.stockDividendTargetKey(failedSecurity, year)
+		).orElseThrow();
+		assertThat(failedStatus.getStatus()).isEqualTo(DataSyncStatusValue.FAILED);
 	}
 
 	private void addTrade(Account account, SecurityItem securityItem, LocalDate tradeDate) {

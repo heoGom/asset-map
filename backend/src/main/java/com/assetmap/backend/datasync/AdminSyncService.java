@@ -1,15 +1,11 @@
 package com.assetmap.backend.datasync;
 
 import com.assetmap.backend.common.exception.BusinessException;
-import com.assetmap.backend.datasync.provider.ImportedMarketPrice;
 import com.assetmap.backend.datasync.provider.ImportedSecurityMaster;
-import com.assetmap.backend.datasync.provider.MarketPriceProvider;
 import com.assetmap.backend.datasync.provider.SecurityMasterProvider;
 import com.assetmap.backend.dividend.DataSourceType;
 import com.assetmap.backend.dividend.DividendEventRepository;
-import com.assetmap.backend.dividend.importer.dto.DividendImportRequest;
 import com.assetmap.backend.dividend.importer.dto.DividendImportResult;
-import com.assetmap.backend.dividend.importer.service.DividendEventImportService;
 import com.assetmap.backend.marketprice.MarketDataSource;
 import com.assetmap.backend.marketprice.MarketPriceRepository;
 import com.assetmap.backend.securityitem.SecurityItem;
@@ -29,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -44,55 +41,52 @@ public class AdminSyncService {
 
 	private final DataSyncStatusService dataSyncStatusService;
 	private final SecurityMasterProvider securityMasterProvider;
-	private final MarketPriceProvider marketPriceProvider;
 	private final SecurityMasterSyncService securityMasterSyncService;
-	private final MarketPriceSyncService marketPriceSyncService;
+	private final ExternalDataSyncCheckpointService checkpointService;
 	private final SecurityItemRepository securityItemRepository;
 	private final TradeTransactionRepository tradeTransactionRepository;
 	private final MarketPriceRepository marketPriceRepository;
 	private final DividendEventRepository dividendEventRepository;
-	private final DividendEventImportService dividendEventImportService;
 	private final DataSyncPolicyService dataSyncPolicyService;
 	private final String defaultSecurityMasterBasDd;
 	private final int marketPriceDefaultLookbackDays;
 	private final int marketPriceMaxBackfillDays;
 	private final int stockDividendDefaultFromYear;
 	private final int stockDividendRecheckYears;
+	private final int noDataRecheckDays;
 
 	public AdminSyncService(
 			DataSyncStatusService dataSyncStatusService,
 			SecurityMasterProvider securityMasterProvider,
-			MarketPriceProvider marketPriceProvider,
 			SecurityMasterSyncService securityMasterSyncService,
-			MarketPriceSyncService marketPriceSyncService,
+			ExternalDataSyncCheckpointService checkpointService,
 			SecurityItemRepository securityItemRepository,
 			TradeTransactionRepository tradeTransactionRepository,
 			MarketPriceRepository marketPriceRepository,
 			DividendEventRepository dividendEventRepository,
-			DividendEventImportService dividendEventImportService,
 			DataSyncPolicyService dataSyncPolicyService,
 			@Value("${external.krx.security-master.default-bas-dd:}") String defaultSecurityMasterBasDd,
 			@Value("${app.sync.market-prices.default-lookback-days:30}") int marketPriceDefaultLookbackDays,
 			@Value("${app.sync.market-prices.max-backfill-days:60}") int marketPriceMaxBackfillDays,
 			@Value("${app.sync.stock-dividends.default-from-year:2020}") int stockDividendDefaultFromYear,
-			@Value("${app.sync.stock-dividends.recheck-years:2}") int stockDividendRecheckYears
+			@Value("${app.sync.stock-dividends.recheck-years:2}") int stockDividendRecheckYears,
+			@Value("${app.sync.no-data-recheck-days:7}") int noDataRecheckDays
 	) {
 		this.dataSyncStatusService = dataSyncStatusService;
 		this.securityMasterProvider = securityMasterProvider;
-		this.marketPriceProvider = marketPriceProvider;
 		this.securityMasterSyncService = securityMasterSyncService;
-		this.marketPriceSyncService = marketPriceSyncService;
+		this.checkpointService = checkpointService;
 		this.securityItemRepository = securityItemRepository;
 		this.tradeTransactionRepository = tradeTransactionRepository;
 		this.marketPriceRepository = marketPriceRepository;
 		this.dividendEventRepository = dividendEventRepository;
-		this.dividendEventImportService = dividendEventImportService;
 		this.dataSyncPolicyService = dataSyncPolicyService;
 		this.defaultSecurityMasterBasDd = defaultSecurityMasterBasDd;
 		this.marketPriceDefaultLookbackDays = marketPriceDefaultLookbackDays;
 		this.marketPriceMaxBackfillDays = marketPriceMaxBackfillDays;
 		this.stockDividendDefaultFromYear = stockDividendDefaultFromYear;
 		this.stockDividendRecheckYears = stockDividendRecheckYears;
+		this.noDataRecheckDays = noDataRecheckDays;
 	}
 
 	public List<DataSyncStatusResponse> getStatuses() {
@@ -142,7 +136,7 @@ public class AdminSyncService {
 		}
 	}
 
-	@Transactional
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public AdminSyncResponse syncMarketPrices(AdminSyncRequest request) {
 		boolean force = force(request);
 		List<SecurityItem> targetSecurities = tradeTransactionRepository.findDistinctSecurityItemsBySecurityTypes(List.of(SecurityType.STOCK, SecurityType.ETF));
@@ -168,30 +162,12 @@ public class AdminSyncService {
 		int failedCount = 0;
 		LocalDate latestSuccessDate = null;
 		for (MarketPriceDateTarget dateTarget : dateTargets) {
-			LocalDate priceDate = dateTarget.priceDate();
-			String dateTargetKey = TRADED_SECURITIES + "_" + priceDate.format(COMPACT_DATE);
-			dataSyncStatusService.markRunning(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey,
-					"KRX market price sync started. basDd=%s target=%d".formatted(priceDate.format(COMPACT_DATE), dateTarget.targetSecurities().size()));
-			try {
-				List<ImportedMarketPrice> imported = fetchMarketPrices(priceDate, dateTarget.targetSecurities());
-				SyncUpsertResult result = marketPriceSyncService.upsertImportedPrices(imported, dateTarget.targetSecurities());
-				total = total.plus(result);
-				int changedCount = result.insertedCount() + result.updatedCount();
-				importedPriceCount += changedCount;
-				if (changedCount == 0) {
-					dataSyncStatusService.markNoData(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey, priceDate,
-							"NO_DATA: no target market prices for date. target=%d".formatted(dateTarget.targetSecurities().size()));
-					continue;
-				}
-				latestSuccessDate = priceDate;
-				dataSyncStatusService.markSuccess(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey, priceDate,
-						"KRX market price sync completed. imported=%d skipped=%d".formatted(changedCount, result.skippedCount()));
-			} catch (BusinessException exception) {
-				failedCount++;
-				dataSyncStatusService.markFailed(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey, exception.getMessage());
-			} catch (RuntimeException exception) {
-				failedCount++;
-				dataSyncStatusService.markFailed(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey, exception.getMessage());
+			MarketPriceCheckpointResult result = checkpointService.syncMarketPriceDate(dateTarget.priceDate(), dateTarget.targetSecurities());
+			total = total.plus(result.upsertResult());
+			importedPriceCount += result.importedPriceCount();
+			failedCount += result.failedCount();
+			if (result.success()) {
+				latestSuccessDate = result.priceDate();
 			}
 		}
 
@@ -214,7 +190,7 @@ public class AdminSyncService {
 				0, 0, targetSecurities.size(), importedPriceCount, total, failedCount, message, status);
 	}
 
-	@Transactional
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public AdminSyncResponse syncStockDividends(AdminSyncRequest request) {
 		boolean force = force(request);
 		List<SecurityItem> targetSecurities = tradeTransactionRepository.findDistinctSecurityItemsBySecurityTypes(List.of(SecurityType.STOCK))
@@ -227,54 +203,43 @@ public class AdminSyncService {
 		}
 
 		YearRange range = resolveStockDividendRange(request, force, targetSecurities);
+		List<StockDividendYearTarget> yearTargets = resolveStockDividendYearTargets(request, force, targetSecurities, range);
+		if (yearTargets.isEmpty()) {
+			String message = "Stock dividend sync skipped. Already up to date or fresh NO_DATA checkpoints exist.";
+			DataSyncStatusResponse status = dataSyncStatusService.markSkipped(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES, message);
+			return response("SKIPPED", DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES,
+					range.fromYear() + ".." + range.toYear(), 0, 0, targetSecurities.size(), 0, SyncUpsertResult.empty(), 0, message, status);
+		}
 		dataSyncStatusService.markRunning(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES,
-				"Stock dividend sync started. fromYear=%d toYear=%d target=%d".formatted(range.fromYear(), range.toYear(), targetSecurities.size()));
-		try {
-			DividendImportResult result = dividendEventImportService.importTradedStockSecurities(new DividendImportRequest(null, range.fromYear(), range.toYear()));
-			String message = "Stock dividend sync completed. fromYear=%d toYear=%d target=%d imported=%d skipped=%d generatedPayments=%d failed=%d"
-					.formatted(range.fromYear(), range.toYear(), result.targetSecurityCount(), result.importedEventCount(), result.skippedEventCount(), result.generatedPaymentCount(), result.failedSecurityCount());
-			DataSyncStatusResponse status;
-			String statusText;
-			if (result.failedSecurityCount() > 0 && result.importedEventCount() == 0) {
-				status = dataSyncStatusService.markFailed(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES, message);
-				statusText = "FAILED";
-			} else {
-				status = dataSyncStatusService.markSuccess(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES, LocalDate.now(), message);
-				statusText = "SUCCESS";
-			}
-			return response(statusText, DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES,
-					range.fromYear() + ".." + range.toYear(), 0, 0, result.targetSecurityCount(), 0,
-					new SyncUpsertResult(result.targetSecurityCount(), result.importedEventCount(), 0, result.skippedEventCount()),
-					result.failedSecurityCount(), message, status);
-		} catch (BusinessException exception) {
-			DataSyncStatusResponse status = dataSyncStatusService.markFailed(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES, exception.getMessage());
-			return response(exception.getErrorCode().name(), DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES,
-					range.fromYear() + ".." + range.toYear(), 0, 0, targetSecurities.size(), 0, SyncUpsertResult.empty(), 1, exception.getMessage(), status);
-		} catch (RuntimeException exception) {
-			DataSyncStatusResponse status = dataSyncStatusService.markFailed(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES, exception.getMessage());
-			return response("FAILED", DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES,
-					range.fromYear() + ".." + range.toYear(), 0, 0, targetSecurities.size(), 0, SyncUpsertResult.empty(), 1, exception.getMessage(), status);
-		}
-	}
+				"Stock dividend sync started. fromYear=%d toYear=%d target=%d checkpointTargets=%d".formatted(range.fromYear(), range.toYear(), targetSecurities.size(), yearTargets.size()));
 
-	private List<ImportedMarketPrice> fetchMarketPrices(LocalDate priceDate, List<SecurityItem> targetSecurities) {
-		List<ImportedMarketPrice> imported = new ArrayList<>();
-		List<String> kospiTickers = targetStockTickers(targetSecurities, "KOSPI");
-		List<String> kosdaqTickers = targetStockTickers(targetSecurities, "KOSDAQ");
-		List<String> etfTickers = targetSecurities.stream()
-				.filter(security -> security.getSecurityType() == SecurityType.ETF)
-				.map(SecurityItem::getTicker)
-				.toList();
-		if (!kospiTickers.isEmpty()) {
-			imported.addAll(marketPriceProvider.fetchKospiPrices(priceDate, kospiTickers));
+		DividendImportResult total = DividendImportResult.empty();
+		int failedCount = 0;
+		int noDataCount = 0;
+		for (StockDividendYearTarget yearTarget : yearTargets) {
+			StockDividendCheckpointResult result = checkpointService.syncStockDividendSecurityYear(yearTarget.securityItem(), yearTarget.year());
+			total = total.plus(result.importResult());
+			failedCount += result.failedCount();
+			if ("NO_DATA".equals(result.status())) {
+				noDataCount++;
+			}
 		}
-		if (!kosdaqTickers.isEmpty()) {
-			imported.addAll(marketPriceProvider.fetchKosdaqPrices(priceDate, kosdaqTickers));
+
+		String message = "Stock dividend sync completed. fromYear=%d toYear=%d target=%d checkpointTargets=%d imported=%d skipped=%d generatedPayments=%d noData=%d failed=%d"
+				.formatted(range.fromYear(), range.toYear(), targetSecurities.size(), yearTargets.size(), total.importedEventCount(), total.skippedEventCount(), total.generatedPaymentCount(), noDataCount, failedCount);
+		DataSyncStatusResponse status;
+		String statusText;
+		if (failedCount > 0 && total.importedEventCount() == 0 && noDataCount == 0) {
+			status = dataSyncStatusService.markFailed(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES, message);
+			statusText = "FAILED";
+		} else {
+			status = dataSyncStatusService.markSuccess(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES, LocalDate.now(), message);
+			statusText = failedCount > 0 ? "PARTIAL_SUCCESS" : "SUCCESS";
 		}
-		if (!etfTickers.isEmpty()) {
-			imported.addAll(marketPriceProvider.fetchEtfPrices(priceDate, etfTickers));
-		}
-		return imported;
+		return response(statusText, DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, TRADED_STOCK_SECURITIES,
+				range.fromYear() + ".." + range.toYear(), 0, 0, targetSecurities.size(), 0,
+				new SyncUpsertResult(total.targetSecurityCount(), total.importedEventCount(), 0, total.skippedEventCount()),
+				failedCount, message, status);
 	}
 
 	private List<MarketPriceDateTarget> resolveMarketPriceDateTargets(AdminSyncRequest request, List<SecurityItem> targetSecurities) {
@@ -364,12 +329,59 @@ public class AdminSyncService {
 			return List.of();
 		}
 		String dateTargetKey = TRADED_SECURITIES + "_" + priceDate.format(COMPACT_DATE);
-		if (existingIds.isEmpty() && dataSyncStatusService.hasNoDataSync(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey)) {
+		if (existingIds.isEmpty() && dataSyncStatusService.hasFreshNoDataSync(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, dateTargetKey, noDataRecheckDays)) {
 			return List.of();
 		}
 		return eligibleTargets.stream()
 				.filter(security -> !existingIds.contains(security.getId()))
 				.toList();
+	}
+
+	private List<StockDividendYearTarget> resolveStockDividendYearTargets(
+			AdminSyncRequest request,
+			boolean force,
+			List<SecurityItem> targetSecurities,
+			YearRange range
+	) {
+		Map<Long, LocalDate> firstTradeDateBySecurityId = firstTradeDateBySecurityId(List.of(SecurityType.STOCK));
+		int currentYear = LocalDate.now().getYear();
+		int recheckFromYear = Math.max(range.fromYear(), currentYear - Math.max(1, stockDividendRecheckYears) + 1);
+		List<StockDividendYearTarget> yearTargets = new ArrayList<>();
+		for (SecurityItem securityItem : targetSecurities) {
+			LocalDate firstTradeDate = firstTradeDateBySecurityId.get(securityItem.getId());
+			if (firstTradeDate == null) {
+				continue;
+			}
+			int fromYear = Math.max(range.fromYear(), firstTradeDate.getYear());
+			for (int year = fromYear; year <= range.toYear(); year++) {
+				boolean recentRecheckYear = year >= recheckFromYear;
+				if (shouldSyncStockDividendYear(securityItem, year, force(request) || force, recentRecheckYear)) {
+					yearTargets.add(new StockDividendYearTarget(securityItem, year));
+				}
+			}
+		}
+		return yearTargets;
+	}
+
+	private boolean shouldSyncStockDividendYear(SecurityItem securityItem, int year, boolean force, boolean recentRecheckYear) {
+		if (force) {
+			return true;
+		}
+		long eventCount = dividendEventRepository.countBySourceAndSecurityItemIdAndDividendYear(
+				DataSourceType.PUBLIC_DATA_STOCK_DIVIDEND,
+				securityItem.getId(),
+				year
+		);
+		if (eventCount > 0) {
+			return recentRecheckYear;
+		}
+		String targetKey = ExternalDataSyncCheckpointService.stockDividendTargetKey(securityItem, year);
+		return !dataSyncStatusService.hasFreshNoDataSync(
+				DataSyncType.STOCK_DIVIDEND,
+				DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND,
+				targetKey,
+				noDataRecheckDays
+		);
 	}
 
 	private Map<Long, LocalDate> firstTradeDateBySecurityId(List<SecurityType> securityTypes) {
@@ -473,15 +485,6 @@ public class AdminSyncService {
 		return request.basDd();
 	}
 
-	private List<String> targetStockTickers(List<SecurityItem> securities, String market) {
-		return securities.stream()
-				.filter(security -> security.getSecurityType() == SecurityType.STOCK)
-				.filter(security -> StringUtils.hasText(security.getMarket()))
-				.filter(security -> security.getMarket().toUpperCase().contains(market))
-				.map(SecurityItem::getTicker)
-				.toList();
-	}
-
 	private boolean isDomesticKrwStock(SecurityItem securityItem) {
 		if (securityItem.getSecurityType() != SecurityType.STOCK) {
 			return false;
@@ -513,6 +516,9 @@ public class AdminSyncService {
 	}
 
 	private record MarketPriceDateTarget(LocalDate priceDate, List<SecurityItem> targetSecurities) {
+	}
+
+	private record StockDividendYearTarget(SecurityItem securityItem, int year) {
 	}
 
 	private record YearRange(int fromYear, int toYear) {

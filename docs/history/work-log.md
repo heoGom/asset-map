@@ -236,3 +236,10 @@
 - `DataSyncStatus` 날짜 성공 기록이 있더라도 해당 날짜의 일부 종목 시세가 비어 있으면 누락 종목만 다시 가져오도록 했다.
 - 배당 sync는 오늘 성공 기록만으로 skip하지 않고, 국내 `STOCK` 거래 종목의 최초 거래연도와 `DividendEvent` 실제 데이터를 함께 보고 과거 누락분을 복구할 수 있게 했다.
 - `MarketPrice`, `DividendEvent`, `DividendPayment`에 자연키 기준 unique constraint를 추가해 재시도/동시 실행 시 중복 저장을 DB 레벨에서도 방어한다.
+
+### 외부 데이터 sync P1 안정화
+
+- `NO_DATA`를 영구 skip 신호가 아니라 `app.sync.no-data-recheck-days` TTL이 있는 checkpoint로 변경했다. 정상 API 응답의 빈 데이터만 `NO_DATA`로 기록하고, API/인증/응답 코드/파싱 오류는 `FAILED`로 기록해 다음 실행에서 재시도한다.
+- 시세 sync는 날짜별 `TRADED_SECURITIES_YYYYMMDD` checkpoint 단위로 외부 호출, 저장, 상태 기록을 분리해 일부 날짜 실패 시 이전 날짜 성공분이 유지되도록 보강했다.
+- 배당 sync는 국내 `STOCK` 거래 종목의 종목+연도 단위 `STOCK_DIVIDEND_{SECURITY_ID}_{YEAR}` checkpoint를 남기고, 무배당 연도는 `NO_DATA`, 실패 연도는 `FAILED`로 구분한다.
+- startup, scheduler, manual force 경로는 계속 `AdminSyncService`의 동일 정책을 호출하며, ETF 분배금 자동화는 추가하지 않고 수동 입력 정책을 유지한다.

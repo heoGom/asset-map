@@ -108,6 +108,51 @@ public class DividendEventImportService {
 	}
 
 	@Transactional
+	public DividendImportResult importTradedStockSecurity(SecurityItem securityItem, DividendImportRequest request) {
+		int fromYear = resolveFromYear(request);
+		int toYear = resolveToYear(request);
+		validateYearRange(fromYear, toYear);
+		List<Long> userIds = tradeTransactionRepository.findDistinctUserIdsBySecurityItemId(securityItem.getId());
+		try {
+			return importSecurity(userIds, securityItem, fromYear, toYear, false);
+		} catch (BusinessException exception) {
+			DividendSecurityImportResult securityResult = securityResult(
+					securityItem,
+					searchTermResolver.resolve(securityItem),
+					null,
+					"",
+					"",
+					0,
+					0,
+					0,
+					0,
+					0,
+					"FAILED",
+					exception.getErrorCode().name(),
+					Map.of()
+			);
+			return result(1, 0, 0, 0, 1, securityResult);
+		} catch (RuntimeException exception) {
+			DividendSecurityImportResult securityResult = securityResult(
+					securityItem,
+					searchTermResolver.resolve(securityItem),
+					null,
+					"",
+					"",
+					0,
+					0,
+					0,
+					0,
+					0,
+					"FAILED",
+					exception.getMessage(),
+					Map.of()
+			);
+			return result(1, 0, 0, 0, 1, securityResult);
+		}
+	}
+
+	@Transactional
 	public DividendImportResult importOne(Long userId, DividendImportRequest request) {
 		if (request == null || request.securityItemId() == null) {
 			throw new BusinessException(ErrorCode.VALIDATION_001);
@@ -172,6 +217,32 @@ public class DividendEventImportService {
 				);
 				return result(1, 0, 0, 0, 1, securityResult);
 			}
+		}
+
+		StockDividendFetchResult failedResponse = fetchResults.stream()
+				.filter(result -> StringUtils.hasText(result.resultCode()))
+				.filter(result -> !"00".equals(result.resultCode()))
+				.findFirst()
+				.orElse(null);
+		if (failedResponse != null) {
+			log.warn("Stock dividend import failed at API response stage. securityId={} name={} resultCode={} resultMsg={}",
+					securityItem.getId(), securityItem.getName(), failedResponse.resultCode(), failedResponse.resultMsg());
+			DividendSecurityImportResult securityResult = securityResult(
+					securityItem,
+					searchTerms,
+					failedResponse.httpStatus() == 0 ? null : failedResponse.httpStatus(),
+					failedResponse.resultCode(),
+					failedResponse.resultMsg(),
+					failedResponse.totalCount(),
+					failedResponse.itemCount(),
+					0,
+					0,
+					0,
+					"FAILED",
+					ErrorCode.API_RESPONSE_ERROR.name(),
+					Map.of()
+			);
+			return result(1, 0, 0, 0, 1, securityResult);
 		}
 
 		ImportAccumulator accumulator = new ImportAccumulator(fetchResults);

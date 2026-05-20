@@ -90,6 +90,22 @@ public class DataSyncStatusService {
 				.orElse(false);
 	}
 
+	public boolean hasFreshNoDataSync(DataSyncType syncType, DataSyncSource source, String targetKey, int recheckDays) {
+		return repository.findBySyncTypeAndSourceAndTargetKey(syncType, source, targetKey)
+				.map(status -> isFreshNoData(status, recheckDays))
+				.orElse(false);
+	}
+
+	private boolean isFreshNoData(DataSyncStatus status, int recheckDays) {
+		if (status.getStatus() != DataSyncStatusValue.NO_DATA || status.getLastSuccessAt() == null) {
+			return false;
+		}
+		if (recheckDays <= 0) {
+			return false;
+		}
+		return status.getLastSuccessAt().isAfter(LocalDateTime.now().minusDays(recheckDays));
+	}
+
 	private DataSyncStatus getOrCreate(DataSyncType syncType, DataSyncSource source, String targetKey) {
 		return repository.findBySyncTypeAndSourceAndTargetKey(syncType, source, targetKey)
 				.orElseGet(() -> repository.save(new DataSyncStatus(syncType, source, targetKey)));
