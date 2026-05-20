@@ -37,6 +37,7 @@ public class DataSyncStatus extends BaseEntity {
 
 	private LocalDate lastSuccessDate;
 	private LocalDateTime lastSuccessAt;
+	private LocalDateTime lastFailureAt;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
@@ -67,7 +68,8 @@ public class DataSyncStatus extends BaseEntity {
 		this.message = message;
 	}
 
-	public void markFailed(String message) {
+	public void markFailed(LocalDateTime failedAt, String message) {
+		this.lastFailureAt = failedAt;
 		this.status = DataSyncStatusValue.FAILED;
 		this.message = message;
 	}
@@ -92,6 +94,7 @@ public class DataSyncStatus extends BaseEntity {
 	public String getTargetKey() { return targetKey; }
 	public LocalDate getLastSuccessDate() { return lastSuccessDate; }
 	public LocalDateTime getLastSuccessAt() { return lastSuccessAt; }
+	public LocalDateTime getLastFailureAt() { return lastFailureAt; }
 	public DataSyncStatusValue getStatus() { return status; }
 	public String getMessage() { return message; }
 }

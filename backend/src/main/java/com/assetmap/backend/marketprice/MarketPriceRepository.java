@@ -26,4 +26,10 @@ public interface MarketPriceRepository extends JpaRepository<MarketPrice, Long> 
 			@Param("priceDate") LocalDate priceDate,
 			@Param("securityItemIds") List<Long> securityItemIds
 	);
+
+	@Query("select count(distinct m.securityItem.id) from MarketPrice m where m.source = :source and m.securityItem.id in :securityItemIds")
+	long countDistinctSecurityItemIdsWithPrice(
+			@Param("source") MarketDataSource source,
+			@Param("securityItemIds") List<Long> securityItemIds
+	);
 }

@@ -45,7 +45,7 @@ public class DataSyncStatusService {
 	@Transactional
 	public DataSyncStatusResponse markFailed(DataSyncType syncType, DataSyncSource source, String targetKey, String message) {
 		DataSyncStatus status = getOrCreate(syncType, source, targetKey);
-		status.markFailed(message);
+		status.markFailed(LocalDateTime.now(), message);
 		return DataSyncStatusResponse.from(status);
 	}
 

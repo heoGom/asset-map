@@ -13,14 +13,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminSyncController {
 
 	private final AdminSyncService adminSyncService;
+	private final AdminSyncStatusDetailService adminSyncStatusDetailService;
 
-	public AdminSyncController(AdminSyncService adminSyncService) {
+	public AdminSyncController(AdminSyncService adminSyncService, AdminSyncStatusDetailService adminSyncStatusDetailService) {
 		this.adminSyncService = adminSyncService;
+		this.adminSyncStatusDetailService = adminSyncStatusDetailService;
 	}
 
 	@GetMapping("/status")
 	public ApiResponse<List<DataSyncStatusResponse>> statuses() {
 		return ApiResponse.success(adminSyncService.getStatuses());
+	}
+
+	@GetMapping("/status/detail")
+	public ApiResponse<AdminSyncStatusDetailResponse> statusDetail() {
+		return ApiResponse.success(adminSyncStatusDetailService.getDetail());
 	}
 
 	@PostMapping("/security-master")

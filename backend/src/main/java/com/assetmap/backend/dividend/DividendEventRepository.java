@@ -23,6 +23,9 @@ public interface DividendEventRepository extends JpaRepository<DividendEvent, Lo
 	@Query("select count(e) from DividendEvent e where e.source = :source and e.securityItem.id in :securityItemIds")
 	long countBySourceAndSecurityItemIds(@Param("source") DataSourceType source, @Param("securityItemIds") List<Long> securityItemIds);
 
+	@Query("select count(distinct e.securityItem.id) from DividendEvent e where e.source = :source and e.securityItem.id in :securityItemIds")
+	long countDistinctSecurityItemIdsWithEvents(@Param("source") DataSourceType source, @Param("securityItemIds") List<Long> securityItemIds);
+
 	@Query("select count(e) from DividendEvent e where e.source = :source and e.securityItem.id = :securityItemId and e.dividendYear = :dividendYear")
 	long countBySourceAndSecurityItemIdAndDividendYear(
 			@Param("source") DataSourceType source,

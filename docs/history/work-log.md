@@ -243,3 +243,9 @@
 - 시세 sync는 날짜별 `TRADED_SECURITIES_YYYYMMDD` checkpoint 단위로 외부 호출, 저장, 상태 기록을 분리해 일부 날짜 실패 시 이전 날짜 성공분이 유지되도록 보강했다.
 - 배당 sync는 국내 `STOCK` 거래 종목의 종목+연도 단위 `STOCK_DIVIDEND_{SECURITY_ID}_{YEAR}` checkpoint를 남기고, 무배당 연도는 `NO_DATA`, 실패 연도는 `FAILED`로 구분한다.
 - startup, scheduler, manual force 경로는 계속 `AdminSyncService`의 동일 정책을 호출하며, ETF 분배금 자동화는 추가하지 않고 수동 입력 정책을 유지한다.
+
+### 외부 데이터 sync 상태 조회 상세화
+
+- 기존 `/api/admin/sync/status` 리스트 조회는 유지하고, `/api/admin/sync/status/detail`을 추가해 운영 중 startup/scheduler/manual sync 결과를 한 번에 확인할 수 있게 했다.
+- 상세 응답은 종목마스터 마지막 성공/실패 시각, 시세 대상 종목 수와 `MarketPrice` 기준 누락/대기 날짜, 배당 대상 종목 수와 `DividendEvent` 기준 누락 또는 재확인 대상 종목+연도 수를 반환한다.
+- FAILED checkpoint와 fresh/expired `NO_DATA`를 구분해 최근 실패 날짜 및 종목+연도 targetKey를 관리자 화면에서 바로 표시할 수 있게 했다.

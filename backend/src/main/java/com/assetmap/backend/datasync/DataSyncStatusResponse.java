@@ -10,6 +10,7 @@ public record DataSyncStatusResponse(
 		String targetKey,
 		LocalDate lastSuccessDate,
 		LocalDateTime lastSuccessAt,
+		LocalDateTime lastFailureAt,
 		DataSyncStatusValue status,
 		String message
 ) {
@@ -22,6 +23,7 @@ public record DataSyncStatusResponse(
 				status.getTargetKey(),
 				status.getLastSuccessDate(),
 				status.getLastSuccessAt(),
+				status.getLastFailureAt(),
 				status.getStatus(),
 				status.getMessage()
 		);

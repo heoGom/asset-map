@@ -10,7 +10,10 @@ import com.assetmap.backend.common.exception.ErrorCode;
 import com.assetmap.backend.datasync.provider.MarketPriceProvider;
 import com.assetmap.backend.datasync.provider.ImportedMarketPrice;
 import com.assetmap.backend.datasync.provider.ImportedSecurityMaster;
+import com.assetmap.backend.dividend.DataSourceType;
+import com.assetmap.backend.dividend.DividendEvent;
 import com.assetmap.backend.dividend.DividendEventRepository;
+import com.assetmap.backend.dividend.DividendEventType;
 import com.assetmap.backend.dividend.DividendPaymentRepository;
 import com.assetmap.backend.dividend.importer.dto.ImportedDividendEvent;
 import com.assetmap.backend.dividend.importer.dto.StockDividendFetchResult;
@@ -18,6 +21,7 @@ import com.assetmap.backend.dividend.importer.provider.StockDividendProvider;
 import com.assetmap.backend.holding.Holding;
 import com.assetmap.backend.holding.HoldingRepository;
 import com.assetmap.backend.marketprice.MarketDataSource;
+import com.assetmap.backend.marketprice.MarketPrice;
 import com.assetmap.backend.marketprice.MarketPriceRepository;
 import com.assetmap.backend.securityitem.SecurityItem;
 import com.assetmap.backend.securityitem.SecurityItemRepository;
@@ -32,24 +36,33 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@AutoConfigureMockMvc(addFilters = false)
 class DataSyncInfrastructureTest {
 
 	@Autowired
 	private DataSyncStatusService dataSyncStatusService;
 	@Autowired
 	private DataSyncStatusRepository dataSyncStatusRepository;
+	@Autowired
+	private MockMvc mockMvc;
 	@Autowired
 	private AdminSyncService adminSyncService;
 	@Autowired
@@ -93,11 +106,87 @@ class DataSyncInfrastructureTest {
 
 		dataSyncStatusService.markRunning(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", "running");
 		dataSyncStatusService.markSuccess(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", LocalDate.now(), "done");
+		dataSyncStatusService.markFailed(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", "failed once");
+		dataSyncStatusService.markSuccess(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", LocalDate.now(), "done again");
 		dataSyncStatusService.markSkipped(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", "already synced");
 
 		assertThat(dataSyncStatusService.shouldSyncToday(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", false)).isFalse();
 		assertThat(dataSyncStatusService.shouldSyncToday(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", true)).isTrue();
 		assertThat(dataSyncStatusService.getStatus(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL").status()).isEqualTo(DataSyncStatusValue.SUCCESS);
+		assertThat(dataSyncStatusService.getStatus(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL").lastFailureAt()).isNotNull();
+	}
+
+	@Test
+	void adminSyncStatusDetailReportsDbGapsAndStatusCheckpointsWithoutExternalApiCalls() throws Exception {
+		LocalDate today = LocalDate.now();
+		int currentYear = today.getYear();
+		SecurityItem pricedStock = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		SecurityItem missingEtf = securityItemRepository.save(new SecurityItem("133690", "TIGER 미국나스닥100", "ETF", "KOREA", "KRW", SecurityType.ETF));
+		SecurityItem dividendStock = securityItemRepository.save(new SecurityItem("002020", "코오롱", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		SecurityItem missingDividendStock = securityItemRepository.save(new SecurityItem("000660", "SK하이닉스", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, pricedStock, today.minusDays(1));
+		addTrade(account, missingEtf, today.minusDays(1));
+		addTrade(account, dividendStock, today.minusDays(1));
+		addTrade(account, missingDividendStock, today.minusDays(1));
+		marketPriceRepository.save(new MarketPrice(
+				pricedStock,
+				today.minusDays(1),
+				new BigDecimal("70000"),
+				new BigDecimal("70000"),
+				BigDecimal.ZERO,
+				BigDecimal.ZERO,
+				100L,
+				MarketDataSource.KRX,
+				LocalDateTime.now()
+		));
+		dividendEventRepository.save(new DividendEvent(
+				dividendStock,
+				currentYear,
+				null,
+				null,
+				LocalDate.of(currentYear, 12, 31),
+				LocalDate.of(currentYear, 4, 16),
+				DividendEventType.CASH_DIVIDEND,
+				new BigDecimal("1200"),
+				"KRW",
+				DataSourceType.PUBLIC_DATA_STOCK_DIVIDEND
+		));
+		dataSyncStatusService.markSuccess(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", today, "security master ok");
+		dataSyncStatusService.markFailed(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", "security master failed once");
+		dataSyncStatusService.markSuccess(DataSyncType.SECURITY_MASTER, DataSyncSource.KRX, "ALL", today, "security master ok again");
+		dataSyncStatusService.markNoData(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, "TRADED_SECURITIES_" + today.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE), today, "fresh market no data");
+		dataSyncStatusService.markNoData(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, "TRADED_SECURITIES_" + today.minusDays(2).format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE), today.minusDays(2), "expired market no data");
+		expireStatus(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, "TRADED_SECURITIES_" + today.minusDays(2).format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE));
+		dataSyncStatusService.markFailed(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, "TRADED_SECURITIES_" + today.minusDays(3).format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE), "market failed");
+		dataSyncStatusService.markNoData(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, ExternalDataSyncCheckpointService.stockDividendTargetKey(pricedStock, currentYear), LocalDate.of(currentYear, 12, 31), "fresh dividend no data");
+		dataSyncStatusService.markNoData(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, ExternalDataSyncCheckpointService.stockDividendTargetKey(dividendStock, currentYear - 1), LocalDate.of(currentYear - 1, 12, 31), "expired dividend no data");
+		expireStatus(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, ExternalDataSyncCheckpointService.stockDividendTargetKey(dividendStock, currentYear - 1));
+		dataSyncStatusService.markFailed(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, ExternalDataSyncCheckpointService.stockDividendTargetKey(missingDividendStock, currentYear - 1), "dividend failed");
+
+		mockMvc.perform(get("/api/admin/sync/status/detail"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.securityMaster.status").value("SUCCESS"))
+				.andExpect(jsonPath("$.data.securityMaster.lastSuccessAt").exists())
+				.andExpect(jsonPath("$.data.securityMaster.lastFailureAt").exists())
+				.andExpect(jsonPath("$.data.marketPrices.totalTargetSecurityCount").value(4))
+				.andExpect(jsonPath("$.data.marketPrices.pricedSecurityCount").value(1))
+				.andExpect(jsonPath("$.data.marketPrices.missingSecurityCount").value(3))
+				.andExpect(jsonPath("$.data.marketPrices.pendingDateCount").value(1))
+				.andExpect(jsonPath("$.data.marketPrices.freshNoDataDateCount").value(1))
+				.andExpect(jsonPath("$.data.marketPrices.expiredNoDataDateCount").value(1))
+				.andExpect(jsonPath("$.data.marketPrices.recentFailedDates[0].message").value("market failed"))
+				.andExpect(jsonPath("$.data.stockDividends.totalTargetSecurityCount").value(3))
+				.andExpect(jsonPath("$.data.stockDividends.eventSecurityCount").value(1))
+				.andExpect(jsonPath("$.data.stockDividends.missingOrRecheckSecurityYearCount").value(2))
+				.andExpect(jsonPath("$.data.stockDividends.freshNoDataSecurityYearCount").value(1))
+				.andExpect(jsonPath("$.data.stockDividends.expiredNoDataSecurityYearCount").value(1))
+				.andExpect(jsonPath("$.data.stockDividends.recentFailedSecurityYears[0].message").value("dividend failed"));
+
+		verify(marketPriceProvider, never()).fetchKospiPrices(any(LocalDate.class), anyList());
+		verify(marketPriceProvider, never()).fetchKosdaqPrices(any(LocalDate.class), anyList());
+		verify(marketPriceProvider, never()).fetchEtfPrices(any(LocalDate.class), anyList());
+		verify(stockDividendProvider, never()).fetch(any(String.class));
 	}
 
 	@Test
@@ -390,6 +479,12 @@ class DataSyncInfrastructureTest {
 				ExternalDataSyncCheckpointService.stockDividendTargetKey(failedSecurity, year)
 		).orElseThrow();
 		assertThat(failedStatus.getStatus()).isEqualTo(DataSyncStatusValue.FAILED);
+	}
+
+	private void expireStatus(DataSyncType syncType, DataSyncSource source, String targetKey) {
+		DataSyncStatus status = dataSyncStatusRepository.findBySyncTypeAndSourceAndTargetKey(syncType, source, targetKey).orElseThrow();
+		ReflectionTestUtils.setField(status, "lastSuccessAt", LocalDateTime.now().minusDays(8));
+		dataSyncStatusRepository.saveAndFlush(status);
 	}
 
 	private void addTrade(Account account, SecurityItem securityItem, LocalDate tradeDate) {

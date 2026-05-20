@@ -8,5 +8,21 @@ public interface DataSyncStatusRepository extends JpaRepository<DataSyncStatus, 
 
 	Optional<DataSyncStatus> findBySyncTypeAndSourceAndTargetKey(DataSyncType syncType, DataSyncSource source, String targetKey);
 
+	List<DataSyncStatus> findBySyncTypeAndSource(DataSyncType syncType, DataSyncSource source);
+
+	List<DataSyncStatus> findBySyncTypeAndSourceAndStatusAndTargetKeyStartingWithOrderByLastFailureAtDesc(
+			DataSyncType syncType,
+			DataSyncSource source,
+			DataSyncStatusValue status,
+			String targetKeyPrefix
+	);
+
+	List<DataSyncStatus> findBySyncTypeAndSourceAndStatusAndTargetKeyStartingWith(
+			DataSyncType syncType,
+			DataSyncSource source,
+			DataSyncStatusValue status,
+			String targetKeyPrefix
+	);
+
 	List<DataSyncStatus> findAllByOrderBySyncTypeAscSourceAscTargetKeyAsc();
 }
