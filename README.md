@@ -33,20 +33,23 @@ asset-map/
   backend/
     src/main/java/com/assetmap/backend/
       account/        # 계좌 관리 (증권사, 유형 등)
-      securityitem/   # 종목 정보 (티커, 섹터, 국가 등)
-      holding/        # 보유 현황 관리
-      snapshot/       # 과거 자산 기록 및 타임라인
-      dividend/       # 배당 일정 및 지급 내역 관리
-      dashboard/      # 자산/배당 요약 및 통계 API
-      classification/ # 종목 및 자산 분류 체계
-      common/         # 응답, 예외, 엔티티 공통 처리
+      securityitem/   # 종목 마스터 정보 (KRX 종목 등)
+      transaction/    # 거래 내역 관리 및 보유 현황 연동
+      holding/        # 현재 보유 수량 및 평단가 관리
+      dividend/       # 배당 이벤트 및 예상/실제 지급 관리
+      datasync/       # 외부 데이터(KRX, 공공데이터) 동기화 로직
+      marketprice/    # 종목별 시세 및 가격 이력 관리
+      snapshot/       # 과거 자산 기록 및 타임라인 분석
+      dashboard/      # 자산/배당 통계 및 요약 API
+      classification/ # 자산군, 섹터, 국가별 분류 체계
+      common/         # 공통 응답, 예외 처리, 엔티티 기반
   frontend/
     src/
-      app/            # App Router 기반 화면 구성
-      components/     # UI 공통 및 도메인 컴포넌트
-      hooks/          # 커스텀 훅 및 API 연동
-      lib/            # 공통 유틸리티 및 설정
-  docs/               # 프로젝트 기획 및 설계 문서
+      app/            # App Router 기반 화면 구성 (자산, 배당, 계좌 등)
+      components/     # UI 공통 및 도메인(차트, 폼) 컴포넌트
+      hooks/          # API 연동 및 클라이언트 상태 로직
+      lib/            # API 클라이언트 및 유틸리티 설정
+  docs/               # 프로젝트 기획, 설계, 작업 이력 문서
 ```
 
 ## Core Features
@@ -79,17 +82,17 @@ asset-map/
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/dashboard/summary` | 전체 자산 요약 조회 |
-| `GET` | `/api/dashboard/ratios` | 자산 비중 통계 조회 |
+| `GET` | `/api/assets/summary` | 전체 자산 요약 조회 |
+| `GET` | `/api/assets/by-type` | 자산군별 비중 통계 조회 |
 | `GET` | `/api/accounts` | 계좌 목록 및 상세 조회 |
-| `POST` | `/api/holdings` | 보유 종목 추가/수정 |
+| `POST` | `/api/trades` | 신규 거래 등록 및 보유 현황 갱신 |
 | `GET` | `/api/snapshots/timeline` | 자산 추이 타임라인 조회 |
-| `GET` | `/api/dividend/monthly` | 월별 배당 내역 조회 |
-| `GET` | `/api/dividend/growth` | 배당 성장률 분석 조회 |
-| `GET` | `/api/admin/sync/status` | 외부 데이터 동기화 상태 조회 |
-| `POST` | `/api/admin/sync/security-master` | KRX 종목마스터 강제/조건부 동기화 |
-| `POST` | `/api/admin/sync/market-prices` | 거래 종목 기준 KRX 시세 backfill |
-| `POST` | `/api/admin/sync/stock-dividends` | 거래 주식 기준 배당 이벤트 backfill |
+| `GET` | `/api/dividends/monthly` | 월별 예상 배당 내역 조회 |
+| `GET` | `/api/dividends/growth` | 배당 성장률 분석 조회 |
+| `GET` | `/api/admin/sync/status/detail` | 외부 데이터 동기화 상세 상태 조회 |
+| `POST` | `/api/admin/sync/security-master` | KRX 종목마스터 동기화 |
+| `POST` | `/api/admin/sync/market-prices` | KRX 시세 backfill 및 동기화 |
+| `POST` | `/api/admin/sync/stock-dividends` | 국내 주식 배당 정보 동기화 |
 | `GET` | `/api/health` | 서버 상태 체크 |
 
 ## Getting Started
