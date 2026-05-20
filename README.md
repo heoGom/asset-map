@@ -8,21 +8,22 @@ Spring Boot와 Next.js로 구현한 자산 및 배당 정보 시각화 풀스택
 
 - 계좌 및 종목별 통합 자산 관리 시스템
 - 자산 비중 및 계좌별 자산 분포 시각화 (Pie/Bar Chart)
+- **외부 데이터 동기화**: KRX 종목 마스터, 일별 시세, 국내 주식 배당 정보 자동 수집
 - 과거 자산 흐름 추적을 위한 스냅샷 및 타임라인 기능
 - 상세 배당 정보 관리 (월별, 연도별, 종목별 배당 요약 및 성장률)
-- Next.js App Router와 TanStack Query 기반의 프론트엔드 아키텍처
-- Spring Boot 3와 JPA를 활용한 도메인 주도 설계
+- Next.js 16.2 App Router와 TanStack Query 기반의 프론트엔드 아키텍처
+- Spring Boot 3.5.6과 JPA를 활용한 도메인 주도 설계
 - Backend와 Frontend를 하나의 Monorepo로 관리
 
 ## Tech Stack
 
 | Area | Stack |
 | --- | --- |
-| Backend | Java 17, Spring Boot 3, Spring Data JPA, Gradle |
+| Backend | Java 17, Spring Boot 3.5.6, Spring Data JPA, Gradle |
 | Database | MySQL 8.0 (Local via Docker), H2 (Test) |
-| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
+| Frontend | Next.js 16.2, React 19, TypeScript, Tailwind CSS 4 |
 | Visualization | Recharts |
-| Data Fetching | TanStack React Query |
+| Data Fetching | TanStack React Query 5 |
 | Form/Validation | React Hook Form, Zod |
 
 ## Architecture

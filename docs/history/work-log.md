@@ -249,3 +249,9 @@
 - 기존 `/api/admin/sync/status` 리스트 조회는 유지하고, `/api/admin/sync/status/detail`을 추가해 운영 중 startup/scheduler/manual sync 결과를 한 번에 확인할 수 있게 했다.
 - 상세 응답은 종목마스터 마지막 성공/실패 시각, 시세 대상 종목 수와 `MarketPrice` 기준 누락/대기 날짜, 배당 대상 종목 수와 `DividendEvent` 기준 누락 또는 재확인 대상 종목+연도 수를 반환한다.
 - FAILED checkpoint와 fresh/expired `NO_DATA`를 구분해 최근 실패 날짜 및 종목+연도 targetKey를 관리자 화면에서 바로 표시할 수 있게 했다.
+
+### 외부 데이터 sync planning 공통화
+
+- `SyncPlanService`를 추가해 시세 날짜/누락 종목과 배당 종목+연도 후보 계산을 실제 sync 실행과 상세 status 조회가 함께 사용하도록 정리했다.
+- fresh `NO_DATA`는 planning에서 제외하고 expired `NO_DATA` 및 `FAILED` checkpoint는 재시도 대상으로 포함하는 기준을 공통화했다.
+- 시세 `max-backfill-days`는 실행 경로의 1회 처리량 제한으로만 적용하고, 상세 status는 전체 pending 날짜 수를 같은 planning 기준으로 계산한다.

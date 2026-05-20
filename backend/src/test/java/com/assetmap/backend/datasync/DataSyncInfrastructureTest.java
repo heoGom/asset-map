@@ -66,6 +66,8 @@ class DataSyncInfrastructureTest {
 	@Autowired
 	private AdminSyncService adminSyncService;
 	@Autowired
+	private SyncPlanService syncPlanService;
+	@Autowired
 	private SecurityMasterSyncService securityMasterSyncService;
 	@Autowired
 	private MarketPriceSyncService marketPriceSyncService;
@@ -182,6 +184,50 @@ class DataSyncInfrastructureTest {
 				.andExpect(jsonPath("$.data.stockDividends.freshNoDataSecurityYearCount").value(1))
 				.andExpect(jsonPath("$.data.stockDividends.expiredNoDataSecurityYearCount").value(1))
 				.andExpect(jsonPath("$.data.stockDividends.recentFailedSecurityYears[0].message").value("dividend failed"));
+
+		verify(marketPriceProvider, never()).fetchKospiPrices(any(LocalDate.class), anyList());
+		verify(marketPriceProvider, never()).fetchKosdaqPrices(any(LocalDate.class), anyList());
+		verify(marketPriceProvider, never()).fetchEtfPrices(any(LocalDate.class), anyList());
+		verify(stockDividendProvider, never()).fetch(any(String.class));
+	}
+
+	@Test
+	void syncPlanServiceIsSharedBySyncExecutionAndStatusDetailPendingCounts() throws Exception {
+		LocalDate today = LocalDate.now();
+		int currentYear = today.getYear();
+		SecurityItem marketTarget = securityItemRepository.save(new SecurityItem("133690", "TIGER 미국나스닥100", "ETF", "KOREA", "KRW", SecurityType.ETF));
+		SecurityItem freshDividendTarget = securityItemRepository.save(new SecurityItem("002020", "코오롱", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		SecurityItem expiredDividendTarget = securityItemRepository.save(new SecurityItem("000660", "SK하이닉스", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		SecurityItem failedDividendTarget = securityItemRepository.save(new SecurityItem("005935", "삼성전자우", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, marketTarget, today);
+		addTrade(account, freshDividendTarget, today);
+		addTrade(account, expiredDividendTarget, today);
+		addTrade(account, failedDividendTarget, today);
+		String marketTargetKey = "TRADED_SECURITIES_" + today.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+		dataSyncStatusService.markNoData(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, marketTargetKey, today, "fresh market no data");
+		dataSyncStatusService.markNoData(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, ExternalDataSyncCheckpointService.stockDividendTargetKey(freshDividendTarget, currentYear), LocalDate.of(currentYear, 12, 31), "fresh dividend no data");
+		dataSyncStatusService.markNoData(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, ExternalDataSyncCheckpointService.stockDividendTargetKey(expiredDividendTarget, currentYear), LocalDate.of(currentYear, 12, 31), "expired dividend no data");
+		expireStatus(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, ExternalDataSyncCheckpointService.stockDividendTargetKey(expiredDividendTarget, currentYear));
+		dataSyncStatusService.markFailed(DataSyncType.STOCK_DIVIDEND, DataSyncSource.PUBLIC_DATA_STOCK_DIVIDEND, ExternalDataSyncCheckpointService.stockDividendTargetKey(failedDividendTarget, currentYear), "failed dividend");
+
+		MarketPriceSyncPlan freshMarketPlan = syncPlanService.planMarketPrices(new AdminSyncRequest(false, today, null, null, null), false, null);
+		assertThat(freshMarketPlan.dateTargets()).isEmpty();
+		expireStatus(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, marketTargetKey);
+		MarketPriceSyncPlan expiredMarketPlan = syncPlanService.planMarketPrices(new AdminSyncRequest(false, today, null, null, null), false, null);
+		assertThat(expiredMarketPlan.dateTargets()).hasSize(1);
+		dataSyncStatusService.markFailed(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, marketTargetKey, "failed market");
+		MarketPriceSyncPlan failedMarketPlan = syncPlanService.planMarketPrices(new AdminSyncRequest(false, today, null, null, null), false, null);
+		assertThat(failedMarketPlan.dateTargets()).hasSize(1);
+		StockDividendSyncPlan dividendPlan = syncPlanService.planStockDividends(new AdminSyncRequest(false, null, null, currentYear, currentYear), false);
+		assertThat(dividendPlan.yearTargets())
+				.extracting(target -> target.securityItem().getId())
+				.containsExactlyInAnyOrder(expiredDividendTarget.getId(), failedDividendTarget.getId());
+
+		mockMvc.perform(get("/api/admin/sync/status/detail"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.marketPrices.pendingDateCount").value(failedMarketPlan.dateTargets().size()))
+				.andExpect(jsonPath("$.data.stockDividends.missingOrRecheckSecurityYearCount").value(dividendPlan.yearTargets().size()));
 
 		verify(marketPriceProvider, never()).fetchKospiPrices(any(LocalDate.class), anyList());
 		verify(marketPriceProvider, never()).fetchKosdaqPrices(any(LocalDate.class), anyList());

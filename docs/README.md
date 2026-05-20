@@ -31,12 +31,12 @@
 
 AI와 협업을 시작하거나 새로운 환경에서 프로젝트를 파악할 때 다음 순서를 권장합니다.
 
-1.  **[AGENTS.md](../AGENTS.md)**: 작업의 시작점이며, AI가 준수해야 할 최상위 규칙을 확인합니다.
-2.  **[Project Context](./project/project-context.md)**: 현재 프로젝트가 어디까지 진행되었는지 확인합니다.
-3.  **[Backend 상세](./architecture/backend.md) / [Frontend 상세](./architecture/frontend.md)**: 기술 스택과 실행 방법을 파악합니다.
-4.  **[Codex Workflow](./common/operations/codex-workflow.md)**: 반복 작업 절차와 검증/커밋 흐름을 확인합니다.
-5.  **[API Test Scenarios](./project/api-test-scenarios.md)**: 핵심 API 수동 검증 시나리오를 확인합니다.
-6.  **[History](./history)**: 이전 작업의 맥락과 의사결정 과정을 이해합니다.
+1.  **[AGENTS.md](../AGENTS.md)**: AI가 준수해야 할 최상위 규칙과 작업의 시작점 확인.
+2.  **[Project Context](./project/project-context.md)**: 현재 프로젝트 진척도와 핵심 도메인 파악.
+3.  **[Architecture](./architecture)**: [Backend](./architecture/backend.md) 및 [Frontend](./architecture/frontend.md) 상세 설계와 실행 방법 확인.
+4.  **[Requirements](./project/requirements.md)**: 구현된 기능과 예정된 마일스톤 확인.
+5.  **[Codex Workflow](./common/operations/codex-workflow.md)**: 반복 작업 절차와 보안/검증 프로세스 숙지.
+6.  **[History](./history)**: 최근 [작업 내역](./history/work-log.md)과 주요 [의사결정](./history/decisions.md) 맥락 이해.
 
 ---
 

@@ -84,7 +84,7 @@ com.assetmap.backend
 - `POST /api/snapshots`: 현재 Holding 기준 스냅샷 저장
 - `POST /api/market-prices`: 가격 이력 수동 등록
 - `GET /api/market-prices/latest/security/{securityItemId}`: 종목 최신 가격 조회
-- `POST /api/market-prices/refresh`: 실제 외부 연동 전 Stub provider 기반 갱신
+- `POST /api/market-prices/refresh`: 설정된 Provider(KRX 등)를 통해 최신 시세 갱신 트리거
 
 ### 5. Admin Sync
 - `GET /api/admin/sync/status`: syncType/source/targetKey별 동기화 상태 조회
@@ -123,6 +123,7 @@ com.assetmap.backend
 - 배당 API는 `TradeTransaction`에 등장한 국내 `STOCK` 종목만 대상으로 합니다. 오늘 성공 기록만으로 skip하지 않고, 종목별 최초 거래연도와 `DividendEvent` 실제 존재 여부를 함께 확인해 과거 누락분이 있으면 기본 시작연도부터 현재 연도까지 다시 확인합니다. 과거 구간이 채워져 있으면 최근 `app.sync.stock-dividends.recheck-years` 연도를 재확인합니다. ETF 분배금은 자동 대상이 아니며 수동 입력을 유지합니다.
 - `NO_DATA`는 정상 API 응답에서 대상 데이터가 없을 때만 기록하며, `app.sync.no-data-recheck-days` 기간 동안 반복 호출을 막는 checkpoint로만 사용합니다. TTL이 지나면 다시 확인 대상에 포함하고, HTTP/API/인증/파싱 오류는 `FAILED`로 기록해 다음 실행에서 재시도합니다.
 - 시세 sync는 날짜별 `TRADED_SECURITIES_YYYYMMDD`, 배당 sync는 종목+연도별 `STOCK_DIVIDEND_{SECURITY_ID}_{YEAR}` checkpoint를 기록합니다. 날짜 또는 종목+연도 단위 저장/상태 기록을 독립 처리해 중간 실패가 이전 성공분을 rollback하지 않도록 합니다.
+- `SyncPlanService`가 시세 날짜/종목, 배당 종목+연도, fresh/expired `NO_DATA`, `FAILED` 재시도 대상 계산을 공통으로 담당합니다. 실제 sync 실행과 상세 sync status는 같은 planning 결과를 사용하며, 시세의 `max-backfill-days`는 실행 시 처리량 제한에만 적용합니다.
 - 상세 sync status는 `DataSyncStatus` 실행 상태와 실제 `MarketPrice`/`DividendEvent` DB 존재 여부를 함께 집계합니다. `NO_DATA`는 fresh/expired로 나누고, 최근 실패 항목은 날짜 또는 종목+연도 targetKey 기준으로 표시합니다.
 - 배당 이벤트 저장 후 거래 사용자별 `DividendPayment` 생성을 재시도합니다. 이미 이벤트나 payment가 있으면 중복 저장하지 않습니다.
 - ETF 분배금은 자동 API 대상이 아니며 수동 입력을 유지합니다.
