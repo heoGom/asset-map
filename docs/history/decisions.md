@@ -35,3 +35,9 @@
 - 결정: Asset Map 문서에도 `homepage`처럼 작업 및 문서 확인 순서, 문서 읽는 순서를 명시한다.
 - 이유: 작업 흐름이 명확히 드러나야 사용자와 AI가 현재 상태를 같은 기준으로 이해할 수 있다.
 - 영향: `docs/project/project-context.md`, `docs/README.md`, `docs/architecture/backend.md`를 현재 구현 기준과 함께 갱신한다.
+
+## 2026-05-21: Codex 작업 흐름 문서화
+
+- 결정: 반복적인 Codex/AI 작업 절차를 `docs/common/operations/codex-workflow.md`에 분리해 관리한다.
+- 이유: `AGENTS.md`는 최상위 규칙과 문서 진입점으로 유지하고, 조사/구현/검증/보안 확인/commit-push 세부 절차는 반복 운영 문서로 관리하는 편이 명확하다.
+- 영향: `AGENTS.md`와 `docs/README.md`는 Codex 작업 흐름 문서로 연결하고, 향후 작업 절차 변경은 `docs/common/operations/codex-workflow.md`를 우선 갱신한다.

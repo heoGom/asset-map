@@ -13,6 +13,7 @@ AI는 모든 요청에 대해 다음 5단계 절차를 수행합니다.
 - **2순위**: [Project Context](./docs/project/project-context.md) 확인
 - **3순위**: 관련 상세 문서 확인
   - 공통 규칙: `docs/common/rules/*`
+  - 작업 절차: `docs/common/operations/*` (반복 작업 흐름은 [Codex 작업 흐름](./docs/common/operations/codex-workflow.md) 참조)
   - 아키텍처: `docs/architecture/*`
   - 작업 이력: `docs/history/*`
 
