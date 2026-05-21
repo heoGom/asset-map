@@ -117,7 +117,7 @@ public class SyncPlanService {
 			return List.of();
 		}
 		List<MarketPriceDateTarget> dateTargets = new ArrayList<>();
-		for (LocalDate priceDate = start; !priceDate.isAfter(syncEnd); priceDate = priceDate.plusDays(1)) {
+		for (LocalDate priceDate = syncEnd; !priceDate.isBefore(start); priceDate = priceDate.minusDays(1)) {
 			List<SecurityItem> missingTargets = missingMarketPriceTargets(priceDate, targetSecurities, firstTradeDateBySecurityId, force);
 			if (missingTargets.isEmpty()) {
 				continue;
@@ -127,7 +127,9 @@ public class SyncPlanService {
 				break;
 			}
 		}
-		return dateTargets;
+		return dateTargets.stream()
+				.sorted(Comparator.comparing(MarketPriceDateTarget::priceDate))
+				.toList();
 	}
 
 	private List<SecurityItem> missingMarketPriceTargets(

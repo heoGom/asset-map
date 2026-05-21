@@ -19,9 +19,10 @@ interface MonthlyDividendChartProps {
 
 export default function MonthlyDividendChart({ data }: MonthlyDividendChartProps) {
   const { t } = useLanguage();
-  const chartData = data.map((item) => ({
-    month: toFiniteNumber(item.month),
-    amount: toFiniteNumber(item.amount),
+  const amountByMonth = new Map(data.map((item) => [toFiniteNumber(item.month), toFiniteNumber(item.amount)]));
+  const chartData = Array.from({ length: 12 }, (_, index) => ({
+    month: index + 1,
+    amount: amountByMonth.get(index + 1) ?? 0,
   }));
   const hasData = chartData.some((item) => item.amount > 0);
 
@@ -29,11 +30,10 @@ export default function MonthlyDividendChart({ data }: MonthlyDividendChartProps
     <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
       <h3 className="mb-6 text-lg font-bold text-gray-900 dark:text-white">{t("dividends.monthlyStatus")}</h3>
       {!hasData && (
-        <div className="flex h-80 items-center justify-center rounded-lg border border-dashed border-gray-200 text-sm text-gray-500 dark:border-gray-700">
+        <div className="mb-3 rounded-lg border border-dashed border-gray-200 px-3 py-2 text-sm text-gray-500 dark:border-gray-700">
           {t("empty.monthlyDividend")}
         </div>
       )}
-      {hasData && (
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData}>
@@ -83,7 +83,6 @@ export default function MonthlyDividendChart({ data }: MonthlyDividendChartProps
           </BarChart>
         </ResponsiveContainer>
       </div>
-      )}
     </div>
   );
 }

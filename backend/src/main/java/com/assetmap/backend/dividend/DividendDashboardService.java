@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,18 +31,20 @@ public class DividendDashboardService {
 
 	public DividendSummaryResponse summary(Long userId) {
 		int currentYear = LocalDate.now().getYear();
+		List<Holding> holdings = holdingRepository.findByUserId(userId);
+		List<DividendPayment> receivedPayments = receivedPayments(userId);
 		BigDecimal expectedAnnual = expectedAnnualDividend(userId, currentYear);
-		BigDecimal invested = holdingRepository.findByUserId(userId).stream()
+		BigDecimal invested = holdings.stream()
 				.map(holding -> MoneyCalculator.amount(holding.getQuantity(), holding.getAveragePrice()))
 				.reduce(BigDecimal.ZERO, BigDecimal::add);
-		BigDecimal evaluated = holdingRepository.findByUserId(userId).stream()
+		BigDecimal evaluated = holdings.stream()
 				.map(holding -> MoneyCalculator.amount(holding.getQuantity(), holding.getCurrentPrice()))
 				.reduce(BigDecimal.ZERO, BigDecimal::add);
-		BigDecimal currentYearReceived = payments(userId, DividendPaymentStatus.PAID).stream()
+		BigDecimal currentYearReceived = receivedPayments.stream()
 				.filter(payment -> payment.getPaymentDate() != null && payment.getPaymentDate().getYear() == currentYear)
 				.map(DividendPayment::getNetAmountKrw)
 				.reduce(BigDecimal.ZERO, BigDecimal::add);
-		BigDecimal totalReceived = payments(userId, DividendPaymentStatus.PAID).stream()
+		BigDecimal totalReceived = receivedPayments.stream()
 				.map(DividendPayment::getNetAmountKrw)
 				.reduce(BigDecimal.ZERO, BigDecimal::add);
 		return new DividendSummaryResponse(
@@ -59,7 +62,7 @@ public class DividendDashboardService {
 		for (int month = 1; month <= 12; month++) {
 			amounts.put(month, BigDecimal.ZERO);
 		}
-		for (DividendPayment payment : payments(userId, DividendPaymentStatus.PAID)) {
+		for (DividendPayment payment : receivedPayments(userId)) {
 			if (payment.getPaymentDate() != null && payment.getPaymentDate().getYear() == year) {
 				int month = payment.getPaymentDate().getMonthValue();
 				amounts.merge(month, payment.getNetAmountKrw(), BigDecimal::add);
@@ -72,7 +75,7 @@ public class DividendDashboardService {
 
 	public List<YearlyDividendResponse> yearly(Long userId) {
 		Map<Integer, BigDecimal> amounts = new LinkedHashMap<>();
-		for (DividendPayment payment : payments(userId, DividendPaymentStatus.PAID)) {
+		for (DividendPayment payment : receivedPayments(userId)) {
 			if (payment.getPaymentDate() != null) {
 				amounts.merge(payment.getPaymentDate().getYear(), payment.getNetAmountKrw(), BigDecimal::add);
 			}
@@ -86,12 +89,13 @@ public class DividendDashboardService {
 	public List<SecurityDividendResponse> bySecurity(Long userId) {
 		int currentYear = LocalDate.now().getYear();
 		List<Holding> holdings = holdingRepository.findByUserId(userId);
+		List<DividendPayment> receivedPayments = receivedPayments(userId);
 		BigDecimal totalExpected = expectedAnnualDividend(userId, currentYear);
 		return holdings.stream()
 				.map(holding -> {
-					BigDecimal annualPerShare = annualDividendPerShare(holding.getSecurityItem().getId(), currentYear);
+					BigDecimal annualPerShare = estimatedAnnualDividendPerShare(holding.getSecurityItem().getId(), currentYear);
 					BigDecimal expected = holding.getQuantity().multiply(annualPerShare).setScale(2, RoundingMode.HALF_UP);
-					BigDecimal received = payments(userId, DividendPaymentStatus.PAID).stream()
+					BigDecimal received = receivedPayments.stream()
 							.filter(payment -> payment.getSecurityItem().getId().equals(holding.getSecurityItem().getId()))
 							.map(DividendPayment::getNetAmountKrw)
 							.reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -128,18 +132,64 @@ public class DividendDashboardService {
 
 	private BigDecimal expectedAnnualDividend(Long userId, int year) {
 		return holdingRepository.findByUserId(userId).stream()
-				.map(holding -> holding.getQuantity().multiply(annualDividendPerShare(holding.getSecurityItem().getId(), year)))
+				.map(holding -> holding.getQuantity().multiply(estimatedAnnualDividendPerShare(holding.getSecurityItem().getId(), year)))
 				.reduce(BigDecimal.ZERO, BigDecimal::add)
 				.setScale(2, RoundingMode.HALF_UP);
 	}
 
-	private BigDecimal annualDividendPerShare(Long securityItemId, int year) {
-		return eventRepository.findBySecurityItemIdAndDividendYear(securityItemId, year).stream()
+	private BigDecimal estimatedAnnualDividendPerShare(Long securityItemId, int year) {
+		List<DividendEvent> events = eventRepository.findBySecurityItemId(securityItemId).stream()
+				.filter(event -> event.getDividendYear() != null && event.getDividendYear() <= year)
+				.toList();
+		if (events.isEmpty()) {
+			return BigDecimal.ZERO;
+		}
+
+		List<DividendEvent> targetYearEvents = events.stream()
+				.filter(event -> event.getDividendYear() == year)
+				.toList();
+		BigDecimal targetYearSum = targetYearEvents.stream()
 				.map(DividendEvent::getDividendPerShare)
 				.reduce(BigDecimal.ZERO, BigDecimal::add);
+		int inferredFrequency = inferDividendFrequency(events, year);
+		if (targetYearSum.compareTo(BigDecimal.ZERO) > 0 && targetYearEvents.size() >= inferredFrequency) {
+			return targetYearSum;
+		}
+
+		BigDecimal latestPerShare = events.stream()
+				.filter(event -> event.getRecordDate() != null && !event.getRecordDate().isAfter(LocalDate.of(year, 12, 31)))
+				.max(Comparator.comparing(DividendEvent::getRecordDate))
+				.map(DividendEvent::getDividendPerShare)
+				.orElse(BigDecimal.ZERO);
+		BigDecimal annualized = latestPerShare.multiply(BigDecimal.valueOf(inferredFrequency));
+		if (targetYearSum.compareTo(BigDecimal.ZERO) > 0) {
+			return annualized.max(targetYearSum);
+		}
+		return annualized;
 	}
 
-	private List<DividendPayment> payments(Long userId, DividendPaymentStatus status) {
-		return paymentRepository.findByUserIdAndStatus(userId, status);
+	private int inferDividendFrequency(List<DividendEvent> events, int year) {
+		Map<Integer, Long> countByYear = events.stream()
+				.filter(event -> event.getDividendYear() != null && event.getDividendYear() < year)
+				.collect(Collectors.groupingBy(DividendEvent::getDividendYear, Collectors.counting()));
+		long maxHistoricalCount = countByYear.values().stream()
+				.mapToLong(Long::longValue)
+				.max()
+				.orElse(0);
+		if (maxHistoricalCount > 0) {
+			return Math.max(1, Math.toIntExact(maxHistoricalCount));
+		}
+		long currentCount = events.stream()
+				.filter(event -> event.getDividendYear() != null && event.getDividendYear() == year)
+				.count();
+		return Math.max(1, Math.toIntExact(currentCount));
+	}
+
+	private List<DividendPayment> receivedPayments(Long userId) {
+		LocalDate today = LocalDate.now();
+		return paymentRepository.findByUserId(userId).stream()
+				.filter(payment -> payment.getStatus() == DividendPaymentStatus.PAID
+						|| (payment.getPaymentDate() != null && !payment.getPaymentDate().isAfter(today)))
+				.toList();
 	}
 }

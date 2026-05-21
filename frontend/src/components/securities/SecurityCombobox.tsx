@@ -38,6 +38,7 @@ export default function SecurityCombobox({
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isComposing, setIsComposing] = useState(false);
 
   const selectedOption = useMemo(
     () => options.find((option) => option.id === Number(value)),
@@ -79,8 +80,13 @@ export default function SecurityCombobox({
     onChange(String(option.id));
     setQuery(optionLabel(option));
     setIsOpen(false);
+    setActiveIndex(0);
   };
   const activeOption = filteredOptions[Math.min(activeIndex, filteredOptions.length - 1)];
+
+  useEffect(() => {
+    setActiveIndex((index) => Math.min(index, Math.max(filteredOptions.length - 1, 0)));
+  }, [filteredOptions.length]);
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -106,8 +112,11 @@ export default function SecurityCombobox({
           onChange("");
           setIsOpen(true);
         }}
+        onCompositionStart={() => setIsComposing(true)}
+        onCompositionEnd={() => setIsComposing(false)}
         onKeyDown={(event) => {
           if (!isOpen && (event.key === "ArrowDown" || event.key === "Enter")) {
+            event.preventDefault();
             setIsOpen(true);
             return;
           }
@@ -119,9 +128,12 @@ export default function SecurityCombobox({
             event.preventDefault();
             setActiveIndex((index) => Math.max(index - 1, 0));
           }
-          if (event.key === "Enter" && isOpen && activeOption) {
+          if (event.key === "Enter" && isOpen && activeOption && !isComposing) {
             event.preventDefault();
             chooseOption(activeOption);
+          }
+          if (event.key === "Enter" && isOpen && !activeOption) {
+            event.preventDefault();
           }
           if (event.key === "Escape") {
             setIsOpen(false);
@@ -146,6 +158,7 @@ export default function SecurityCombobox({
                 role="option"
                 aria-selected={index === activeIndex}
                 onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => chooseOption(option)}
                 className={`block w-full px-3 py-2 text-left text-sm transition ${
                   index === activeIndex

@@ -306,8 +306,9 @@ class DataSyncInfrastructureTest {
 	}
 
 	@Test
-	void adminMarketPriceSyncStartsFromFirstTradeDateWithoutLookbackCutoff() {
+	void adminMarketPriceSyncPrioritizesLatestDatesWhenBackfillHasLargeGap() {
 		LocalDate firstTradeDate = LocalDate.now().minusDays(90);
+		LocalDate firstSelectedDate = LocalDate.now().minusDays(59);
 		SecurityItem traded = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
 		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
 		addTrade(account, traded, firstTradeDate);
@@ -320,8 +321,30 @@ class DataSyncInfrastructureTest {
 		AdminSyncResponse response = adminSyncService.syncMarketPrices(new AdminSyncRequest(false, null, null, null, null));
 
 		assertThat(response.status()).isEqualTo("SUCCESS");
-		assertThat(response.basDd()).startsWith(firstTradeDate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE));
-		assertThat(marketPriceRepository.existsBySecurityItemIdAndPriceDateAndSource(traded.getId(), firstTradeDate, MarketDataSource.KRX)).isTrue();
+		assertThat(response.basDd()).startsWith(firstSelectedDate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE));
+		assertThat(response.basDd()).endsWith(LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE));
+		assertThat(marketPriceRepository.existsBySecurityItemIdAndPriceDateAndSource(traded.getId(), LocalDate.now(), MarketDataSource.KRX)).isTrue();
+		assertThat(marketPriceRepository.existsBySecurityItemIdAndPriceDateAndSource(traded.getId(), firstTradeDate, MarketDataSource.KRX)).isFalse();
+	}
+
+	@Test
+	void adminMarketPriceSyncRunsFromDateCheckpointsEvenWhenRepresentativeCheckpointIsRunning() {
+		LocalDate priceDate = LocalDate.now();
+		SecurityItem traded = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, traded, priceDate);
+		dataSyncStatusService.markRunning(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, AdminSyncService.TRADED_SECURITIES, "stale representative running");
+		when(marketPriceProvider.fetchKospiPrices(eq(priceDate), eq(List.of("005930"))))
+				.thenReturn(List.of(price("005930", priceDate, "70000")));
+
+		MarketPriceSyncPlan plan = syncPlanService.planMarketPrices(new AdminSyncRequest(false, null, null, null, null), false, 60);
+		AdminSyncResponse response = adminSyncService.syncMarketPrices(new AdminSyncRequest(false, null, null, null, null));
+
+		assertThat(plan.dateTargets()).extracting(MarketPriceDateTarget::priceDate).containsExactly(priceDate);
+		assertThat(response.status()).isEqualTo("SUCCESS");
+		assertThat(dataSyncStatusService.getStatus(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, AdminSyncService.TRADED_SECURITIES).status()).isEqualTo(DataSyncStatusValue.SUCCESS);
+		assertThat(dataSyncStatusService.getStatus(DataSyncType.MARKET_PRICE, DataSyncSource.KRX, "TRADED_SECURITIES_" + priceDate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)).status()).isEqualTo(DataSyncStatusValue.SUCCESS);
+		assertThat(marketPriceRepository.existsBySecurityItemIdAndPriceDateAndSource(traded.getId(), priceDate, MarketDataSource.KRX)).isTrue();
 	}
 
 	@Test

@@ -55,6 +55,14 @@ public class HoldingSnapshotService {
 		for (HoldingSnapshot snapshot : snapshots(userId, from, to)) {
 			amounts.merge(snapshot.getSnapshotDate(), snapshot.getEvaluatedAmountKrw(), BigDecimal::add);
 		}
+		if (amounts.isEmpty()) {
+			BigDecimal currentEvaluatedAmount = holdingRepository.findByUserId(userId).stream()
+					.map(holding -> MoneyCalculator.amount(holding.getQuantity(), holding.getCurrentPrice()))
+					.reduce(BigDecimal.ZERO, BigDecimal::add);
+			if (currentEvaluatedAmount.compareTo(BigDecimal.ZERO) > 0) {
+				amounts.put(LocalDate.now(), currentEvaluatedAmount);
+			}
+		}
 		return amounts.entrySet().stream()
 				.map(entry -> new AssetTimelineResponse(entry.getKey(), entry.getValue()))
 				.toList();

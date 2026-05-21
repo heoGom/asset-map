@@ -108,6 +108,9 @@ com.assetmap.backend
 - 부동 소수점 오차 방지를 위해 금액 계산 시 `BigDecimal` 사용을 원칙으로 합니다.
 - `TradeTransaction` 등록 시 `Holding`을 자동 생성/갱신합니다.
 - 배당 지급 예정 생성은 `DividendEvent.recordDate` 기준 보유수량을 거래내역에서 계산합니다.
+- 배당 대시보드의 올해/누적/월별 수령액은 `PAID` 상태뿐 아니라 `paymentDate <= today`인 생성 배당금도 지급 완료로 간주해 집계합니다. 자동 생성 직후 상태가 `EXPECTED`여도 지급일이 지난 배당은 화면에서 수령액으로 표시됩니다.
+- 연간 예상 배당금은 현재 보유 수량과 종목별 예상 연간 주당 배당금을 곱해 계산합니다. 현재 연도 이벤트가 일부 분기만 존재할 경우 과거 연도 이벤트 빈도를 이용해 최신 주당 배당금을 연간화해 분기 배당 종목이 단일 분기 금액으로만 표시되지 않게 합니다.
+- `GET /api/snapshots/timeline`은 저장된 스냅샷이 없고 현재 보유 평가액이 있으면 오늘 기준 현재 평가액 1점을 반환해 자산 성장 타임라인 영역이 비어 보이지 않게 합니다.
 
 ### 데이터 동기화 구조
 - `DataSyncStatus`는 `syncType`, `source`, `targetKey` 조합으로 동기화 실행 상태와 마지막 성공 일자를 저장합니다.
@@ -119,7 +122,7 @@ com.assetmap.backend
 - 종목 마스터는 전체 수집 대상으로 보고 `ticker` 기준으로 `SecurityItem`을 upsert합니다. KRX `ISU_CD`는 `isinCode`에 저장합니다.
 - 시세 대상은 `Holding`이 아니라 `TradeTransaction`에 한 번이라도 등장한 `STOCK`/`ETF` 종목입니다. 현재 보유하지 않더라도 과거 거래 종목이면 backfill 대상에 포함됩니다.
 - KRX 시세 API는 `basDd` 기준 전체 시장 응답을 내려주지만, 저장은 거래내역 대상 ticker만 수행합니다. 중복 기준은 `securityItemId + priceDate + source`이며, 최신 가격이면 `Holding.currentPrice`를 갱신합니다.
-- 시세 backfill은 `TradeTransaction`에 등장한 각 `STOCK`/`ETF` 종목의 최초 거래일부터 오늘까지 실제 KRX `MarketPrice` 존재 여부를 종목별/날짜별로 확인합니다. `DataSyncStatus` 성공 기록만으로 skip하지 않고, 특정 날짜에 일부 종목만 저장되어 있으면 누락 종목만 재시도합니다. `app.sync.market-prices.max-backfill-days`는 전체 대상 기간 제한이 아니라 1회 실행에서 처리할 날짜 chunk 크기로만 사용합니다.
+- 시세 backfill은 `TradeTransaction`에 등장한 각 `STOCK`/`ETF` 종목의 최초 거래일부터 오늘까지 실제 KRX `MarketPrice` 존재 여부를 종목별/날짜별로 확인합니다. 최신 일별 시세가 오래된 backfill에 밀리지 않도록 누락 날짜 선정은 최신 날짜부터 우선하고, 선택된 chunk 내부만 오래된 날짜 순서로 처리합니다. `DataSyncStatus` 성공 기록만으로 skip하지 않고, 특정 날짜에 일부 종목만 저장되어 있으면 누락 종목만 재시도합니다. `app.sync.market-prices.max-backfill-days`는 전체 대상 기간 제한이 아니라 1회 실행에서 처리할 날짜 chunk 크기로만 사용합니다.
 - 배당 API는 `TradeTransaction`에 등장한 국내 `STOCK` 종목만 대상으로 합니다. 오늘 성공 기록만으로 skip하지 않고, 종목별 최초 거래연도와 `DividendEvent` 실제 존재 여부를 함께 확인해 과거 누락분이 있으면 기본 시작연도부터 현재 연도까지 다시 확인합니다. 과거 구간이 채워져 있으면 최근 `app.sync.stock-dividends.recheck-years` 연도를 재확인합니다. ETF 분배금은 자동 대상이 아니며 수동 입력을 유지합니다.
 - `NO_DATA`는 정상 API 응답에서 대상 데이터가 없을 때만 기록하며, `app.sync.no-data-recheck-days` 기간 동안 반복 호출을 막는 checkpoint로만 사용합니다. TTL이 지나면 다시 확인 대상에 포함하고, HTTP/API/인증/파싱 오류는 `FAILED`로 기록해 다음 실행에서 재시도합니다.
 - 시세 sync는 날짜별 `TRADED_SECURITIES_YYYYMMDD`, 배당 sync는 종목+연도별 `STOCK_DIVIDEND_{SECURITY_ID}_{YEAR}` checkpoint를 기록합니다. 날짜 또는 종목+연도 단위 저장/상태 기록을 독립 처리해 중간 실패가 이전 성공분을 rollback하지 않도록 합니다.

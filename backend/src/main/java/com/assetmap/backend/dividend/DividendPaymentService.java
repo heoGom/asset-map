@@ -52,7 +52,9 @@ public class DividendPaymentService {
 	}
 
 	public List<DividendPaymentResponse> findByUserId(Long userId) {
-		return paymentRepository.findByUserId(userId).stream().map(DividendPaymentResponse::from).toList();
+		return paymentRepository.findByUserIdOrderByPaymentDateAscIdAsc(userId).stream()
+				.map(DividendPaymentResponse::from)
+				.toList();
 	}
 
 	public List<DividendPaymentResponse> findByAccount(Long userId, Long accountId) {

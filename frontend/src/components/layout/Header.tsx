@@ -46,25 +46,28 @@ export default function Header() {
                 </Link>
               );
             })}
-            <details className="group relative">
-              <summary
-                className={`cursor-pointer list-none rounded-md px-3 py-2 transition [&::-webkit-details-marker]:hidden ${
+            <div className="group relative">
+              <Link
+                href="/securities"
+                className={`block rounded-md px-3 py-2 transition ${
                   securitiesActive
                     ? "bg-white text-gray-950 shadow-sm dark:bg-gray-800 dark:text-white"
                     : "hover:bg-white/70 hover:text-gray-950 dark:hover:bg-gray-800/70 dark:hover:text-white"
                 }`}
               >
                 {t("nav.management")}
-              </summary>
-              <div className="absolute right-0 top-11 w-44 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
-                <Link
-                  href="/securities"
-                  className="block rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
-                >
-                  {t("nav.securities")}
-                </Link>
+              </Link>
+              <div className="invisible absolute right-0 top-full z-50 w-44 pt-2 opacity-0 transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                <div className="rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                  <Link
+                    href="/securities"
+                    className="block rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                  >
+                    {t("nav.securities")}
+                  </Link>
+                </div>
               </div>
-            </details>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">

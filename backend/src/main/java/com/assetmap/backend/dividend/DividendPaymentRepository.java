@@ -9,6 +9,8 @@ public interface DividendPaymentRepository extends JpaRepository<DividendPayment
 
 	List<DividendPayment> findByUserId(Long userId);
 
+	List<DividendPayment> findByUserIdOrderByPaymentDateAscIdAsc(Long userId);
+
 	List<DividendPayment> findByUserIdAndAccountIdOrderByPaymentDateAscIdAsc(Long userId, Long accountId);
 
 	List<DividendPayment> findByUserIdAndStatus(Long userId, DividendPaymentStatus status);

@@ -30,9 +30,9 @@ export default function DividendsPage() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedYear, setSelectedYear] = useState(2025);
-  const [isEventPanelOpen, setIsEventPanelOpen] = useState(false);
   const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [isEventPanelOpen, setIsEventPanelOpen] = useState(false);
   const [importForm, setImportForm] = useState({
     fromYear: "2020",
     toYear: String(currentYear),
@@ -140,6 +140,7 @@ export default function DividendsPage() {
   };
   const displayMonthly = monthly || [];
   const displaySecurities = securitiesDividend || [];
+  const displayDividendPayments = [...dividendPayments].sort(compareDividendPaymentByPaymentDate);
   const hasDataLoadIssue = !summary || !monthly;
 
   const handleSecurityChange = (securityItemId: string) => {
@@ -201,7 +202,7 @@ export default function DividendsPage() {
               onChange={(event) => setSelectedYear(Number(event.target.value))}
               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
             >
-              {[2024, 2025, 2026].map((year) => (
+              {Array.from({ length: 5 }, (_, index) => currentYear - 3 + index).map((year) => (
                 <option key={year} value={year}>{year}</option>
               ))}
             </select>
@@ -469,7 +470,7 @@ export default function DividendsPage() {
           <div className="mb-8">
             <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">내 배당금 내역</h2>
             <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
-              {dividendPayments.length === 0 ? (
+              {displayDividendPayments.length === 0 ? (
                 <p className="p-6 text-sm text-gray-500 dark:text-gray-400">아직 생성된 배당 내역이 없습니다.</p>
               ) : (
                 <div className="overflow-x-auto">
@@ -482,7 +483,7 @@ export default function DividendsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
-                      {dividendPayments.map((payment) => (
+                      {displayDividendPayments.map((payment) => (
                         <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                           <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">{payment.paymentDate || "-"}</td>
                           <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-300">{payment.accountName}</td>
@@ -491,7 +492,7 @@ export default function DividendsPage() {
                           <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">{formatCurrency(payment.dividendPerShare)}</td>
                           <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">{formatCurrency(payment.grossAmountKrw)}</td>
                           <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">{formatCurrency(payment.netAmountKrw)}</td>
-                          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-300">{payment.status}</td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-300">{paymentStatusLabel(payment)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -504,4 +505,33 @@ export default function DividendsPage() {
       </div>
     </AuthGate>
   );
+}
+
+function paymentStatusLabel(payment: { paymentDate?: string; status: "EXPECTED" | "CONFIRMED" | "PAID" }) {
+  if (payment.status === "PAID") {
+    return "지급완료";
+  }
+  if (payment.paymentDate && payment.paymentDate <= new Date().toISOString().slice(0, 10)) {
+    return "지급완료";
+  }
+  if (payment.status === "CONFIRMED") {
+    return "확정";
+  }
+  return "지급예정";
+}
+
+function compareDividendPaymentByPaymentDate(
+  a: { id: number; paymentDate?: string },
+  b: { id: number; paymentDate?: string }
+) {
+  if (!a.paymentDate && !b.paymentDate) {
+    return a.id - b.id;
+  }
+  if (!a.paymentDate) {
+    return 1;
+  }
+  if (!b.paymentDate) {
+    return -1;
+  }
+  return a.paymentDate.localeCompare(b.paymentDate) || a.id - b.id;
 }
