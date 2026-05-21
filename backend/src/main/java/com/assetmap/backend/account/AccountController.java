@@ -2,8 +2,8 @@ package com.assetmap.backend.account;
 
 import com.assetmap.backend.auth.SecurityUtil;
 import com.assetmap.backend.common.response.ApiResponse;
-import com.assetmap.backend.dividend.DividendPaymentResponse;
-import com.assetmap.backend.dividend.DividendPaymentService;
+import com.assetmap.backend.dividend.payment.dto.DividendPaymentResponse;
+import com.assetmap.backend.dividend.payment.DividendPaymentService;
 import com.assetmap.backend.holding.HoldingResponse;
 import com.assetmap.backend.holding.HoldingService;
 import com.assetmap.backend.transaction.TradeTransactionResponse;

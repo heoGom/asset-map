@@ -1,6 +1,6 @@
 package com.assetmap.backend.datasync.provider;
 
-import com.assetmap.backend.datasync.DataSyncSource;
+import com.assetmap.backend.datasync.common.DataSyncSource;
 import com.assetmap.backend.securityitem.SecurityType;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.LocalDate;

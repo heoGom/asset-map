@@ -50,7 +50,20 @@ com.assetmap.backend
 ├── transaction     # 거래 원천 데이터 및 Holding 자동 갱신
 ├── holding         # 보유 수량 및 평단가 관리
 ├── classification  # 종목별 다각도 분류 (섹터, 전략 등)
+├── datasync        # 외부 데이터(KRX, 공공데이터) 동기화
+│   ├── admin       # 관리자용 동기화 제어 API 및 상세 상태 조회
+│   ├── common      # 동기화 정책 및 공통 Enum
+│   ├── execution   # 실제 동기화 실행 로직 및 실행 결과
+│   ├── plan        # 동기화 계획 및 결과 객체
+│   ├── schedule    # startup/scheduled sync runner
+│   ├── status      # 동기화 상태 엔티티/Repository/Service
+│   └── provider    # 외부 API 호출 클라이언트 (KRX 등)
 ├── dividend        # 배당 스케줄링 및 지급 이력
+│   ├── common      # 배당 공통 Enum
+│   ├── dashboard   # 배당 대시보드 API/Service/DTO
+│   ├── event       # 배당 이벤트 API/Entity/Repository/Service/DTO/Enum
+│   ├── payment     # 배당 지급 API/Entity/Repository/Service/DTO/Enum
+│   └── importer    # 외부 배당 데이터 수집 (금융위 등)
 ├── marketprice     # 가격 이력 및 외부 시세 provider 구조
 ├── snapshot        # 자산 추이 추적을 위한 스냅샷
 ├── dashboard       # 통합 자산/배당 통계 API

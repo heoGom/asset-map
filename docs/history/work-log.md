@@ -266,3 +266,14 @@
 - 내 배당금 내역은 API와 화면 표시 모두 지급일 오름차순 기준으로 정렬한다.
 - KRX 시세 동기화는 과거 누락 backfill이 많은 경우에도 최신 일별 시세가 밀리지 않도록 최신 누락 날짜를 우선 선택한다.
 - 종목 자동완성은 방향키/마우스 hover active 상태와 Enter 선택 처리를 보강해 거래 입력 폼에서 검색 후 Enter 선택이 form submit으로 오작동하지 않게 했다.
+
+## 2026-05-21
+
+### Backend 패키지 구조 정리 (datasync, dividend)
+
+- 도메인 기반 패키징을 유지하되, 파일이 많아진 `datasync`와 `dividend` 패키지 내부를 역할별 하위 패키지로 정리했다.
+- **datasync**: `admin`, `common`, `execution`, `plan`, `schedule`, `status` 하위 패키지로 분리. 기존 `SyncPlanService`, `ExternalDataSyncCheckpointService` 내부 레코드(MarketPriceSyncPlan 등)를 `plan`/`execution` 패키지의 독립 클래스로 추출했다.
+- **dividend**: `common`, `dashboard`, `event`, `payment` 하위 패키지로 분리. `importer` 하위 구조는 기존대로 유지했다.
+- 패키지 이동에 따른 내부/외부 import를 모두 업데이트하고, 테스트 코드와의 호환성을 위해 일부 상수(`AdminSyncService.TRADED_SECURITIES` 등)의 가시성을 `public`으로 조정했다.
+- `marketprice`, `transaction`, `snapshot` 패키지는 파일 수가 7~12개로 관리 가능한 수준이며, "작은 도메인은 나누지 않는다"는 원칙에 따라 현재 구조를 유지했다.
+- `./gradlew clean build` 및 전체 테스트 통과를 통해 기능 변경이 없음을 확인했다.

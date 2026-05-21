@@ -2,8 +2,8 @@ package com.assetmap.backend.dividend.importer.service;
 
 import com.assetmap.backend.common.exception.BusinessException;
 import com.assetmap.backend.common.exception.ErrorCode;
-import com.assetmap.backend.dividend.DataSourceType;
-import com.assetmap.backend.dividend.DividendEventRepository;
+import com.assetmap.backend.dividend.common.DataSourceType;
+import com.assetmap.backend.dividend.event.DividendEventRepository;
 import com.assetmap.backend.dividend.importer.dto.DividendImportRequest;
 import com.assetmap.backend.dividend.importer.dto.DividendImportResult;
 import com.assetmap.backend.dividend.importer.dto.DividendImportSkipReason;

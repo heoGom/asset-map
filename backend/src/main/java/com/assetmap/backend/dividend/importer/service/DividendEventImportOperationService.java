@@ -1,12 +1,12 @@
 package com.assetmap.backend.dividend.importer.service;
 
-import com.assetmap.backend.dividend.DataSourceType;
-import com.assetmap.backend.dividend.DividendEvent;
-import com.assetmap.backend.dividend.DividendEventRepository;
-import com.assetmap.backend.dividend.DividendEventType;
-import com.assetmap.backend.dividend.DividendPaymentGenerateRequest;
-import com.assetmap.backend.dividend.DividendPaymentGenerateResponse;
-import com.assetmap.backend.dividend.DividendPaymentService;
+import com.assetmap.backend.dividend.common.DataSourceType;
+import com.assetmap.backend.dividend.event.DividendEvent;
+import com.assetmap.backend.dividend.event.DividendEventRepository;
+import com.assetmap.backend.dividend.event.enums.DividendEventType;
+import com.assetmap.backend.dividend.payment.dto.DividendPaymentGenerateRequest;
+import com.assetmap.backend.dividend.payment.dto.DividendPaymentGenerateResponse;
+import com.assetmap.backend.dividend.payment.DividendPaymentService;
 import com.assetmap.backend.dividend.importer.dto.DividendImportSkipReason;
 import com.assetmap.backend.dividend.importer.dto.ImportedDividendEvent;
 import com.assetmap.backend.securityitem.SecurityItem;
