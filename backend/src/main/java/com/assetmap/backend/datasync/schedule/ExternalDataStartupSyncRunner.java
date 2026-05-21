@@ -24,6 +24,8 @@ public class ExternalDataStartupSyncRunner {
 	private final boolean securityMasterOnStartup;
 	private final boolean marketPricesEnabled;
 	private final boolean marketPricesOnStartup;
+	private final boolean holdingSnapshotsEnabled;
+	private final boolean holdingSnapshotsOnStartup;
 	private final boolean stockDividendsEnabled;
 	private final boolean stockDividendsOnStartup;
 
@@ -33,6 +35,8 @@ public class ExternalDataStartupSyncRunner {
 			@Value("${app.sync.security-master.on-startup:false}") boolean securityMasterOnStartup,
 			@Value("${app.sync.market-prices.enabled:false}") boolean marketPricesEnabled,
 			@Value("${app.sync.market-prices.on-startup:false}") boolean marketPricesOnStartup,
+			@Value("${app.sync.holding-snapshots.enabled:false}") boolean holdingSnapshotsEnabled,
+			@Value("${app.sync.holding-snapshots.on-startup:false}") boolean holdingSnapshotsOnStartup,
 			@Value("${app.sync.stock-dividends.enabled:false}") boolean stockDividendsEnabled,
 			@Value("${app.sync.stock-dividends.on-startup:false}") boolean stockDividendsOnStartup
 	) {
@@ -41,6 +45,8 @@ public class ExternalDataStartupSyncRunner {
 		this.securityMasterOnStartup = securityMasterOnStartup;
 		this.marketPricesEnabled = marketPricesEnabled;
 		this.marketPricesOnStartup = marketPricesOnStartup;
+		this.holdingSnapshotsEnabled = holdingSnapshotsEnabled;
+		this.holdingSnapshotsOnStartup = holdingSnapshotsOnStartup;
 		this.stockDividendsEnabled = stockDividendsEnabled;
 		this.stockDividendsOnStartup = stockDividendsOnStartup;
 	}
@@ -52,6 +58,9 @@ public class ExternalDataStartupSyncRunner {
 		}
 		if (marketPricesEnabled && marketPricesOnStartup) {
 			run("market prices", () -> adminSyncService.syncMarketPrices(new AdminSyncRequest(false, null, null, null, null)));
+		}
+		if (holdingSnapshotsEnabled && holdingSnapshotsOnStartup) {
+			run("holding snapshots", () -> adminSyncService.syncHoldingSnapshots(new AdminSyncRequest(false, null, null, null, null)));
 		}
 		if (stockDividendsEnabled && stockDividendsOnStartup) {
 			run("stock dividends", () -> adminSyncService.syncStockDividends(new AdminSyncRequest(false, null, null, null, null)));

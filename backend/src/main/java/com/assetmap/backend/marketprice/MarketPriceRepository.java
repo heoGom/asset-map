@@ -17,6 +17,15 @@ public interface MarketPriceRepository extends JpaRepository<MarketPrice, Long> 
 
 	boolean existsBySecurityItemIdAndPriceDateAndSource(Long securityItemId, LocalDate priceDate, MarketDataSource source);
 
+	List<MarketPrice> findByPriceDateAndSource(LocalDate priceDate, MarketDataSource source);
+
+	@Query("select distinct m.priceDate from MarketPrice m where m.source = :source and m.priceDate between :from and :to")
+	List<LocalDate> findDistinctPriceDatesBySourceBetween(
+			@Param("source") MarketDataSource source,
+			@Param("from") LocalDate from,
+			@Param("to") LocalDate to
+	);
+
 	@Query("select max(m.priceDate) from MarketPrice m where m.source = :source and m.securityItem.id in :securityItemIds")
 	Optional<LocalDate> findMaxPriceDateBySourceAndSecurityItemIds(@Param("source") MarketDataSource source, @Param("securityItemIds") List<Long> securityItemIds);
 

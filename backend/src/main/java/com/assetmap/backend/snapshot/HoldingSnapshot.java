@@ -11,10 +11,18 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
+@Table(
+		uniqueConstraints = @UniqueConstraint(
+				name = "uk_holding_snapshot_position_date",
+				columnNames = {"user_id", "account_id", "security_item_id", "snapshot_date"}
+		)
+)
 public class HoldingSnapshot extends BaseEntity {
 
 	@Id
@@ -85,6 +93,24 @@ public class HoldingSnapshot extends BaseEntity {
 		this.evaluatedAmountKrw = evaluatedAmountKrw;
 	}
 
+	public void updateSnapshot(
+			BigDecimal quantity,
+			BigDecimal averagePrice,
+			BigDecimal currentPrice,
+			BigDecimal evaluatedAmount,
+			String currency,
+			BigDecimal exchangeRate,
+			BigDecimal evaluatedAmountKrw
+	) {
+		this.quantity = quantity;
+		this.averagePrice = averagePrice;
+		this.currentPrice = currentPrice;
+		this.evaluatedAmount = evaluatedAmount;
+		this.currency = currency;
+		this.exchangeRate = exchangeRate;
+		this.evaluatedAmountKrw = evaluatedAmountKrw;
+	}
+
 	public Long getUserId() {
 		return userId;
 	}
@@ -100,4 +126,13 @@ public class HoldingSnapshot extends BaseEntity {
 	public BigDecimal getEvaluatedAmountKrw() {
 		return evaluatedAmountKrw;
 	}
+
+	public Long getId() { return id; }
+	public SecurityItem getSecurityItem() { return securityItem; }
+	public BigDecimal getQuantity() { return quantity; }
+	public BigDecimal getAveragePrice() { return averagePrice; }
+	public BigDecimal getCurrentPrice() { return currentPrice; }
+	public BigDecimal getEvaluatedAmount() { return evaluatedAmount; }
+	public String getCurrency() { return currency; }
+	public BigDecimal getExchangeRate() { return exchangeRate; }
 }

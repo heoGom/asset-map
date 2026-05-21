@@ -28,10 +28,14 @@ public class HoldingSnapshotService {
 	public SnapshotSaveResponse saveCurrentHoldings(SnapshotSaveRequest request) {
 		LocalDate snapshotDate = request.snapshotDate() == null ? LocalDate.now() : request.snapshotDate();
 		BigDecimal exchangeRate = BigDecimal.ONE;
-		List<HoldingSnapshot> snapshots = holdingRepository.findByUserId(request.userId()).stream()
-				.map(holding -> {
-					BigDecimal evaluatedAmount = MoneyCalculator.amount(holding.getQuantity(), holding.getCurrentPrice());
-					return new HoldingSnapshot(
+		int savedCount = 0;
+		for (Holding holding : holdingRepository.findByUserId(request.userId())) {
+			BigDecimal evaluatedAmount = MoneyCalculator.amount(holding.getQuantity(), holding.getCurrentPrice());
+			HoldingSnapshot snapshot = snapshotRepository
+					.findByUserIdAndAccountIdAndSecurityItemIdAndSnapshotDate(holding.getUserId(), holding.getAccount().getId(), holding.getSecurityItem().getId(), snapshotDate)
+					.orElse(null);
+			if (snapshot == null) {
+				snapshotRepository.save(new HoldingSnapshot(
 							holding.getUserId(),
 							holding.getAccount(),
 							holding.getSecurityItem(),
@@ -43,11 +47,21 @@ public class HoldingSnapshotService {
 							holding.getCurrency(),
 							exchangeRate,
 							evaluatedAmount.multiply(exchangeRate)
-					);
-				})
-				.toList();
-		snapshotRepository.saveAll(snapshots);
-		return new SnapshotSaveResponse(snapshotDate, snapshots.size());
+					));
+			} else {
+				snapshot.updateSnapshot(
+						holding.getQuantity(),
+						holding.getAveragePrice(),
+						holding.getCurrentPrice(),
+						evaluatedAmount,
+						holding.getCurrency(),
+						exchangeRate,
+						evaluatedAmount.multiply(exchangeRate)
+				);
+			}
+			savedCount++;
+		}
+		return new SnapshotSaveResponse(snapshotDate, savedCount);
 	}
 
 	public List<AssetTimelineResponse> timeline(Long userId, LocalDate from, LocalDate to) {

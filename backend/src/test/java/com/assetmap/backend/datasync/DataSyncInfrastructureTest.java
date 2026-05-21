@@ -43,6 +43,9 @@ import com.assetmap.backend.marketprice.MarketPriceRepository;
 import com.assetmap.backend.securityitem.SecurityItem;
 import com.assetmap.backend.securityitem.SecurityItemRepository;
 import com.assetmap.backend.securityitem.SecurityType;
+import com.assetmap.backend.snapshot.HoldingSnapshot;
+import com.assetmap.backend.snapshot.HoldingSnapshotDateSyncService;
+import com.assetmap.backend.snapshot.HoldingSnapshotRepository;
 import com.assetmap.backend.transaction.TradeTransaction;
 import com.assetmap.backend.transaction.TradeTransactionRepository;
 import com.assetmap.backend.transaction.TradeType;
@@ -95,6 +98,8 @@ class DataSyncInfrastructureTest {
 	@Autowired
 	private HoldingRepository holdingRepository;
 	@Autowired
+	private HoldingSnapshotRepository holdingSnapshotRepository;
+	@Autowired
 	private AccountRepository accountRepository;
 	@Autowired
 	private TradeTransactionRepository tradeTransactionRepository;
@@ -111,6 +116,7 @@ class DataSyncInfrastructureTest {
 	void setUp() {
 		dividendPaymentRepository.deleteAll();
 		dividendEventRepository.deleteAll();
+		holdingSnapshotRepository.deleteAll();
 		marketPriceRepository.deleteAll();
 		holdingRepository.deleteAll();
 		tradeTransactionRepository.deleteAll();
@@ -342,6 +348,84 @@ class DataSyncInfrastructureTest {
 		assertThat(response.basDd()).endsWith(LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE));
 		assertThat(marketPriceRepository.existsBySecurityItemIdAndPriceDateAndSource(traded.getId(), LocalDate.now(), MarketDataSource.KRX)).isTrue();
 		assertThat(marketPriceRepository.existsBySecurityItemIdAndPriceDateAndSource(traded.getId(), firstTradeDate, MarketDataSource.KRX)).isFalse();
+	}
+
+	@Test
+	void holdingSnapshotSyncBuildsPositionsFromTradesAndMarketPricesThenUpserts() {
+		LocalDate snapshotDate = LocalDate.of(2026, 5, 15);
+		SecurityItem priced = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		SecurityItem soldOut = securityItemRepository.save(new SecurityItem("000660", "SK하이닉스", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		SecurityItem noPrice = securityItemRepository.save(new SecurityItem("133690", "TIGER 미국나스닥100", "ETF", "KOREA", "KRW", SecurityType.ETF));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		tradeTransactionRepository.save(new TradeTransaction(1L, account, priced, snapshotDate.minusDays(2), TradeType.BUY, new BigDecimal("10"), new BigDecimal("100"), BigDecimal.ZERO, BigDecimal.ZERO, "KRW", TransactionSource.MANUAL, null));
+		tradeTransactionRepository.save(new TradeTransaction(1L, account, priced, snapshotDate.minusDays(1), TradeType.BUY, new BigDecimal("5"), new BigDecimal("200"), BigDecimal.ZERO, BigDecimal.ZERO, "KRW", TransactionSource.MANUAL, null));
+		tradeTransactionRepository.save(new TradeTransaction(1L, account, soldOut, snapshotDate.minusDays(2), TradeType.BUY, new BigDecimal("3"), new BigDecimal("50000"), BigDecimal.ZERO, BigDecimal.ZERO, "KRW", TransactionSource.MANUAL, null));
+		tradeTransactionRepository.save(new TradeTransaction(1L, account, soldOut, snapshotDate.minusDays(1), TradeType.SELL, new BigDecimal("3"), new BigDecimal("51000"), BigDecimal.ZERO, BigDecimal.ZERO, "KRW", TransactionSource.MANUAL, null));
+		tradeTransactionRepository.save(new TradeTransaction(1L, account, noPrice, snapshotDate.minusDays(1), TradeType.BUY, BigDecimal.ONE, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, "KRW", TransactionSource.MANUAL, null));
+		marketPriceRepository.save(marketPrice(priced, snapshotDate, "300"));
+		marketPriceRepository.save(marketPrice(soldOut, snapshotDate, "51000"));
+
+		AdminSyncResponse first = adminSyncService.syncHoldingSnapshots(new AdminSyncRequest(false, snapshotDate, null, null, null));
+		AdminSyncResponse second = adminSyncService.syncHoldingSnapshots(new AdminSyncRequest(true, null, null, snapshotDate, snapshotDate, 10, null, null));
+
+		assertThat(first.status()).isEqualTo("SUCCESS");
+		assertThat(first.insertedCount()).isEqualTo(1);
+		assertThat(second.status()).isEqualTo("SUCCESS");
+		assertThat(second.updatedCount()).isEqualTo(1);
+		assertThat(holdingSnapshotRepository.findAll()).hasSize(1);
+		HoldingSnapshot snapshot = holdingSnapshotRepository.findAll().get(0);
+		assertThat(snapshot.getUserId()).isEqualTo(1L);
+		assertThat(snapshot.getSecurityItem().getId()).isEqualTo(priced.getId());
+		assertThat(snapshot.getQuantity()).isEqualByComparingTo("15");
+		assertThat(snapshot.getAveragePrice()).isEqualByComparingTo("133.333333");
+		assertThat(snapshot.getCurrentPrice()).isEqualByComparingTo("300");
+		assertThat(snapshot.getEvaluatedAmountKrw()).isEqualByComparingTo("4500.00");
+		assertThat(dataSyncStatusRepository.findBySyncTypeAndSourceAndTargetKey(
+				DataSyncType.HOLDING_SNAPSHOT,
+				DataSyncSource.INTERNAL,
+				HoldingSnapshotDateSyncService.targetKey(snapshotDate)
+		).orElseThrow().getStatus()).isEqualTo(DataSyncStatusValue.SUCCESS);
+	}
+
+	@Test
+	void holdingSnapshotSyncPlansOnlyMarketPriceDatesAndSkipsExistingDatesUnlessForced() {
+		LocalDate oldDate = LocalDate.of(2026, 5, 14);
+		LocalDate latestDate = LocalDate.of(2026, 5, 15);
+		SecurityItem security = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, security, oldDate);
+		marketPriceRepository.save(marketPrice(security, latestDate, "70000"));
+
+		AdminSyncResponse latestOnly = adminSyncService.syncHoldingSnapshots(new AdminSyncRequest(false, null, null, oldDate, latestDate, 10, null, null));
+		AdminSyncResponse skipped = adminSyncService.syncHoldingSnapshots(new AdminSyncRequest(false, null, null, oldDate, latestDate, 10, null, null));
+
+		assertThat(latestOnly.status()).isEqualTo("SUCCESS");
+		assertThat(latestOnly.basDd()).isEqualTo("20260515..20260515");
+		assertThat(holdingSnapshotRepository.findAll()).hasSize(1);
+		assertThat(skipped.status()).isEqualTo("SKIPPED");
+		assertThat(dataSyncStatusRepository.findBySyncTypeAndSourceAndTargetKey(
+				DataSyncType.HOLDING_SNAPSHOT,
+				DataSyncSource.INTERNAL,
+				HoldingSnapshotDateSyncService.targetKey(oldDate)
+		)).isEmpty();
+	}
+
+	@Test
+	void dailyPortfolioRunsMarketPriceSyncBeforeHoldingSnapshotSync() {
+		LocalDate priceDate = LocalDate.of(2026, 5, 15);
+		SecurityItem security = securityItemRepository.save(new SecurityItem("005930", "삼성전자", "KOSPI", "KOREA", "KRW", SecurityType.STOCK));
+		Account account = accountRepository.save(new Account(1L, "Local Account", "Local", AccountType.GENERAL, "KRW", null));
+		addTrade(account, security, priceDate);
+		when(marketPriceProvider.fetchKospiPrices(eq(priceDate), eq(List.of("005930"))))
+				.thenReturn(List.of(price("005930", priceDate, "70000")));
+
+		AdminSyncResponse response = adminSyncService.syncDailyPortfolio(new AdminSyncRequest(false, priceDate, null, null, null));
+
+		assertThat(response.status()).isEqualTo("SUCCESS");
+		assertThat(marketPriceRepository.existsBySecurityItemIdAndPriceDateAndSource(security.getId(), priceDate, MarketDataSource.KRX)).isTrue();
+		assertThat(holdingSnapshotRepository.findAll()).hasSize(1);
+		assertThat(holdingSnapshotRepository.findAll().get(0).getEvaluatedAmountKrw()).isEqualByComparingTo("70000.00");
+		verify(marketPriceProvider).fetchKospiPrices(eq(priceDate), eq(List.of("005930")));
 	}
 
 	@Test
@@ -588,6 +672,21 @@ class DataSyncInfrastructureTest {
 				TransactionSource.MANUAL,
 				null
 		));
+	}
+
+	private MarketPrice marketPrice(SecurityItem securityItem, LocalDate priceDate, String currentPrice) {
+		BigDecimal price = new BigDecimal(currentPrice);
+		return new MarketPrice(
+				securityItem,
+				priceDate,
+				price,
+				price,
+				BigDecimal.ZERO,
+				BigDecimal.ZERO,
+				100L,
+				MarketDataSource.KRX,
+				LocalDateTime.now()
+		);
 	}
 
 	private ImportedMarketPrice price(String ticker, LocalDate priceDate, String currentPrice) {

@@ -21,6 +21,15 @@ public interface TradeTransactionRepository extends JpaRepository<TradeTransacti
 
 	List<TradeTransaction> findByUserIdAndAccountIdAndSecurityItemIdAndTradeDateLessThanEqualOrderByTradeDateAscIdAsc(Long userId, Long accountId, Long securityItemId, LocalDate tradeDate);
 
+	@Query("""
+			select t from TradeTransaction t
+			join fetch t.account
+			join fetch t.securityItem
+			where t.tradeDate <= :tradeDate
+			order by t.userId asc, t.account.id asc, t.securityItem.id asc, t.tradeDate asc, t.id asc
+			""")
+	List<TradeTransaction> findAllByTradeDateLessThanEqualForSnapshot(@Param("tradeDate") LocalDate tradeDate);
+
 	@Query("select distinct t.securityItem from TradeTransaction t where t.userId = :userId")
 	List<SecurityItem> findDistinctSecurityItemsByUserId(Long userId);
 

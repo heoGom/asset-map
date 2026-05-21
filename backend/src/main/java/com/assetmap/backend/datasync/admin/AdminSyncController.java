@@ -46,6 +46,16 @@ public class AdminSyncController {
 		return ApiResponse.success(adminSyncService.syncMarketPrices(request));
 	}
 
+	@PostMapping("/holding-snapshots")
+	public ApiResponse<AdminSyncResponse> syncHoldingSnapshots(@RequestBody(required = false) AdminSyncRequest request) {
+		return ApiResponse.success(adminSyncService.syncHoldingSnapshots(request));
+	}
+
+	@PostMapping("/daily-portfolio")
+	public ApiResponse<AdminSyncResponse> syncDailyPortfolio(@RequestBody(required = false) AdminSyncRequest request) {
+		return ApiResponse.success(adminSyncService.syncDailyPortfolio(request));
+	}
+
 	@PostMapping("/stock-dividends")
 	public ApiResponse<AdminSyncResponse> syncStockDividends(@RequestBody(required = false) AdminSyncRequest request) {
 		return ApiResponse.success(adminSyncService.syncStockDividends(request));

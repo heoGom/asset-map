@@ -25,6 +25,7 @@ import com.assetmap.backend.datasync.provider.SecurityMasterProvider;
 import com.assetmap.backend.dividend.importer.dto.DividendImportResult;
 import com.assetmap.backend.securityitem.SecurityItem;
 import com.assetmap.backend.securityitem.SecurityItemRepository;
+import com.assetmap.backend.snapshot.HoldingSnapshotSyncService;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -53,6 +54,7 @@ public class AdminSyncService {
 	private final SyncPlanService syncPlanService;
 	private final SecurityItemRepository securityItemRepository;
 	private final DataSyncPolicyService dataSyncPolicyService;
+	private final HoldingSnapshotSyncService holdingSnapshotSyncService;
 	private final String defaultSecurityMasterBasDd;
 	private final int marketPriceDefaultLookbackDays;
 	private final int marketPriceMaxBackfillDays;
@@ -65,6 +67,7 @@ public class AdminSyncService {
 			SyncPlanService syncPlanService,
 			SecurityItemRepository securityItemRepository,
 			DataSyncPolicyService dataSyncPolicyService,
+			HoldingSnapshotSyncService holdingSnapshotSyncService,
 			@Value("${external.krx.security-master.default-bas-dd:}") String defaultSecurityMasterBasDd,
 			@Value("${app.sync.market-prices.default-lookback-days:30}") int marketPriceDefaultLookbackDays,
 			@Value("${app.sync.market-prices.max-backfill-days:60}") int marketPriceMaxBackfillDays
@@ -76,6 +79,7 @@ public class AdminSyncService {
 		this.syncPlanService = syncPlanService;
 		this.securityItemRepository = securityItemRepository;
 		this.dataSyncPolicyService = dataSyncPolicyService;
+		this.holdingSnapshotSyncService = holdingSnapshotSyncService;
 		this.defaultSecurityMasterBasDd = defaultSecurityMasterBasDd;
 		this.marketPriceDefaultLookbackDays = marketPriceDefaultLookbackDays;
 		this.marketPriceMaxBackfillDays = marketPriceMaxBackfillDays;
@@ -233,6 +237,35 @@ public class AdminSyncService {
 				range.fromYear() + ".." + range.toYear(), 0, 0, targetSecurities.size(), 0,
 				new SyncUpsertResult(total.targetSecurityCount(), total.importedEventCount(), 0, total.skippedEventCount()),
 				failedCount, message, status);
+	}
+
+	public AdminSyncResponse syncHoldingSnapshots(AdminSyncRequest request) {
+		return holdingSnapshotSyncService.sync(request);
+	}
+
+	public AdminSyncResponse syncDailyPortfolio(AdminSyncRequest request) {
+		AdminSyncResponse marketPriceResponse = syncMarketPrices(request);
+		AdminSyncResponse snapshotResponse = syncHoldingSnapshots(request);
+		String message = "Daily portfolio sync completed. marketStatus=%s marketMessage=%s snapshotStatus=%s snapshotMessage=%s"
+				.formatted(marketPriceResponse.status(), marketPriceResponse.message(), snapshotResponse.status(), snapshotResponse.message());
+		return new AdminSyncResponse(
+				snapshotResponse.status(),
+				snapshotResponse.syncType(),
+				snapshotResponse.source(),
+				snapshotResponse.targetKey(),
+				snapshotResponse.basDd(),
+				marketPriceResponse.kospiImportedCount(),
+				marketPriceResponse.kosdaqImportedCount(),
+				snapshotResponse.targetSecurityCount(),
+				marketPriceResponse.importedPriceCount(),
+				snapshotResponse.receivedCount(),
+				snapshotResponse.insertedCount(),
+				snapshotResponse.updatedCount(),
+				snapshotResponse.skippedCount(),
+				marketPriceResponse.failedCount() + snapshotResponse.failedCount(),
+				message,
+				snapshotResponse.syncStatus()
+		);
 	}
 
 	private AdminSyncResponse response(

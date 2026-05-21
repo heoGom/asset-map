@@ -124,13 +124,15 @@ com.assetmap.backend
 - 배당 대시보드의 올해/누적/월별 수령액은 `PAID` 상태뿐 아니라 `paymentDate <= today`인 생성 배당금도 지급 완료로 간주해 집계합니다. 자동 생성 직후 상태가 `EXPECTED`여도 지급일이 지난 배당은 화면에서 수령액으로 표시됩니다.
 - 연간 예상 배당금은 현재 보유 수량과 종목별 예상 연간 주당 배당금을 곱해 계산합니다. 현재 연도 이벤트가 일부 분기만 존재할 경우 과거 연도 이벤트 빈도를 이용해 최신 주당 배당금을 연간화해 분기 배당 종목이 단일 분기 금액으로만 표시되지 않게 합니다.
 - `GET /api/snapshots/timeline`은 저장된 스냅샷이 없고 현재 보유 평가액이 있으면 오늘 기준 현재 평가액 1점을 반환해 자산 성장 타임라인 영역이 비어 보이지 않게 합니다.
+- HoldingSnapshot 자동 적재는 외부 시세 API를 직접 호출하지 않고, 이미 저장된 KRX `MarketPrice` 날짜만 대상으로 합니다. `snapshotDate` 이하의 `TradeTransaction`을 계좌/종목별로 누적해 보유수량과 평균단가를 계산하고, 해당 날짜의 KRX 시세가 있는 종목만 `HoldingSnapshot`에 upsert합니다. 같은 `user_id + account_id + security_item_id + snapshot_date` 조합은 중복 저장하지 않습니다.
 
 ### 데이터 동기화 구조
 - `DataSyncStatus`는 `syncType`, `source`, `targetKey` 조합으로 동기화 실행 상태와 마지막 성공 일자를 저장합니다.
 - `DataSyncPolicyService`는 `force`, `DataSyncStatus`, 로컬 DB 보유 여부를 함께 보고 실행/skip을 판단합니다.
 - `local` profile은 `app.sync.enabled=true`, `app.sync.on-startup.enabled=true`일 때 서버 시작 후 종목마스터, 시세, 배당 동기화 필요 여부를 순서대로 확인합니다. 각 단계는 독립 `try/catch`로 실행되어 실패해도 애플리케이션 부팅을 막지 않습니다.
 - `test` profile은 `app.sync.enabled=false`를 유지하므로 startup/scheduled 외부 API 호출이 실행되지 않습니다.
-- `ExternalDataSyncScheduler`는 `@Scheduled`로 같은 `AdminSyncService` 정책을 호출합니다. 기본 local 스케줄은 종목마스터 매일 07:10, 시세 평일 18:30, 배당 매일 08:00입니다.
+- `ExternalDataSyncScheduler`는 `@Scheduled`로 같은 `AdminSyncService` 정책을 호출합니다. 기본 local 스케줄은 종목마스터 매일 07:10, daily portfolio(시세 sync 후 HoldingSnapshot sync) 평일 18:30, 배당 매일 08:00입니다.
+- HoldingSnapshot sync는 시세 sync 후처리 성격이며 기본 local startup 순서는 종목마스터, 시세, HoldingSnapshot, 배당입니다. scheduled 실행은 daily portfolio가 `syncMarketPrices()` 후 `syncHoldingSnapshots()`를 같은 호출 안에서 실행해 순서를 보장합니다.
 - KRX 종목 마스터는 `KRX_API_KEY` 설정값을 `AUTH_KEY` header로 전달하고, `{"basDd":"YYYYMMDD"}` JSON body로 유가증권/코스닥 종목기본정보를 호출합니다. 실제 키 값은 Git에 포함하지 않습니다.
 - 종목 마스터는 전체 수집 대상으로 보고 `ticker` 기준으로 `SecurityItem`을 upsert합니다. KRX `ISU_CD`는 `isinCode`에 저장합니다.
 - 시세 대상은 `Holding`이 아니라 `TradeTransaction`에 한 번이라도 등장한 `STOCK`/`ETF` 종목입니다. 현재 보유하지 않더라도 과거 거래 종목이면 backfill 대상에 포함됩니다.
@@ -139,6 +141,7 @@ com.assetmap.backend
 - 배당 API는 `TradeTransaction`에 등장한 국내 `STOCK` 종목만 대상으로 합니다. 오늘 성공 기록만으로 skip하지 않고, 종목별 최초 거래연도와 `DividendEvent` 실제 존재 여부를 함께 확인해 과거 누락분이 있으면 기본 시작연도부터 현재 연도까지 다시 확인합니다. 과거 구간이 채워져 있으면 최근 `app.sync.stock-dividends.recheck-years` 연도를 재확인합니다. ETF 분배금은 자동 대상이 아니며 수동 입력을 유지합니다.
 - `NO_DATA`는 정상 API 응답에서 대상 데이터가 없을 때만 기록하며, `app.sync.no-data-recheck-days` 기간 동안 반복 호출을 막는 checkpoint로만 사용합니다. TTL이 지나면 다시 확인 대상에 포함하고, HTTP/API/인증/파싱 오류는 `FAILED`로 기록해 다음 실행에서 재시도합니다.
 - 시세 sync는 날짜별 `TRADED_SECURITIES_YYYYMMDD`, 배당 sync는 종목+연도별 `STOCK_DIVIDEND_{SECURITY_ID}_{YEAR}` checkpoint를 기록합니다. 날짜 또는 종목+연도 단위 저장/상태 기록을 독립 처리해 중간 실패가 이전 성공분을 rollback하지 않도록 합니다.
+- HoldingSnapshot sync는 대표 `ALL`과 날짜별 `HOLDING_SNAPSHOT_YYYYMMDD` checkpoint를 `HOLDING_SNAPSHOT/INTERNAL`로 기록합니다.
 - `SyncPlanService`가 시세 날짜/종목, 배당 종목+연도, fresh/expired `NO_DATA`, `FAILED` 재시도 대상 계산을 공통으로 담당합니다. 실제 sync 실행과 상세 sync status는 같은 planning 결과를 사용하며, 시세의 `max-backfill-days`는 실행 시 처리량 제한에만 적용합니다.
 - 상세 sync status는 `DataSyncStatus` 실행 상태와 실제 `MarketPrice`/`DividendEvent` DB 존재 여부를 함께 집계합니다. `NO_DATA`는 fresh/expired로 나누고, 최근 실패 항목은 날짜 또는 종목+연도 targetKey 기준으로 표시합니다.
 - 배당 이벤트 저장 후 거래 사용자별 `DividendPayment` 생성을 재시도합니다. 이미 이벤트나 payment가 있으면 중복 저장하지 않습니다.

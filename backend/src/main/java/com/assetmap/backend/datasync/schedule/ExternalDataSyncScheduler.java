@@ -21,17 +21,20 @@ public class ExternalDataSyncScheduler {
 	private final AdminSyncService adminSyncService;
 	private final boolean securityMasterEnabled;
 	private final boolean marketPricesEnabled;
+	private final boolean holdingSnapshotsEnabled;
 	private final boolean stockDividendsEnabled;
 
 	public ExternalDataSyncScheduler(
 			AdminSyncService adminSyncService,
 			@Value("${app.sync.security-master.enabled:false}") boolean securityMasterEnabled,
 			@Value("${app.sync.market-prices.enabled:false}") boolean marketPricesEnabled,
+			@Value("${app.sync.holding-snapshots.enabled:false}") boolean holdingSnapshotsEnabled,
 			@Value("${app.sync.stock-dividends.enabled:false}") boolean stockDividendsEnabled
 	) {
 		this.adminSyncService = adminSyncService;
 		this.securityMasterEnabled = securityMasterEnabled;
 		this.marketPricesEnabled = marketPricesEnabled;
+		this.holdingSnapshotsEnabled = holdingSnapshotsEnabled;
 		this.stockDividendsEnabled = stockDividendsEnabled;
 	}
 
@@ -45,6 +48,10 @@ public class ExternalDataSyncScheduler {
 	@Scheduled(cron = "${app.sync.market-prices.cron:-}")
 	public void syncMarketPrices() {
 		if (marketPricesEnabled) {
+			if (holdingSnapshotsEnabled) {
+				run("scheduled daily portfolio", () -> adminSyncService.syncDailyPortfolio(new AdminSyncRequest(false, null, null, null, null)));
+				return;
+			}
 			run("scheduled market prices", () -> adminSyncService.syncMarketPrices(new AdminSyncRequest(false, null, null, null, null)));
 		}
 	}

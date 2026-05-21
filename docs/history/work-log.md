@@ -277,3 +277,13 @@
 - 패키지 이동에 따른 내부/외부 import를 모두 업데이트하고, 테스트 코드와의 호환성을 위해 일부 상수(`AdminSyncService.TRADED_SECURITIES` 등)의 가시성을 `public`으로 조정했다.
 - `marketprice`, `transaction`, `snapshot` 패키지는 파일 수가 7~12개로 관리 가능한 수준이며, "작은 도메인은 나누지 않는다"는 원칙에 따라 현재 구조를 유지했다.
 - `./gradlew clean build` 및 전체 테스트 통과를 통해 기능 변경이 없음을 확인했다.
+
+## 2026-05-22
+
+### HoldingSnapshot 자동 적재
+
+- 자산 성장 타임라인을 위해 저장된 KRX `MarketPrice` 날짜를 기준으로 `HoldingSnapshot`을 자동 upsert하는 내부 sync를 추가했다.
+- snapshot 생성은 외부 API를 직접 호출하지 않고, `snapshotDate` 이하의 `TradeTransaction` 누적 포지션과 해당 날짜 `MarketPrice`만 사용한다.
+- `HOLDING_SNAPSHOT/INTERNAL` sync status와 날짜별 `HOLDING_SNAPSHOT_YYYYMMDD` checkpoint를 기록한다.
+- `daily-portfolio` admin sync는 `MarketPrice` sync 이후 HoldingSnapshot sync를 실행해 순서를 보장한다.
+- scheduled daily portfolio도 같은 호출 안에서 `MarketPrice` sync 후 HoldingSnapshot sync를 실행해, 별도 cron 시간차로 인한 순서 경합을 제거했다.
